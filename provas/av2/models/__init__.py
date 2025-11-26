@@ -1,0 +1,1 @@
+# Este arquivo torna o diretório 'models' em um pacote Python
