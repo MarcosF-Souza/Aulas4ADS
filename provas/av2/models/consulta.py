@@ -131,6 +131,23 @@ class Consulta:
             consultas.append(Consulta(**result))
         return consultas
     
+    @staticmethod
+    def listar_todas():
+        """Lista todas as consultas (READ)"""
+        db = Database()
+        query = """
+        SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
+        FROM consultas c
+        LEFT JOIN pacientes p ON c.id_paciente = p.id
+        LEFT JOIN medicos m ON c.id_medico = m.id
+        ORDER BY c.data_consulta DESC, c.hora_consulta DESC
+        """
+        results = db.fetch_all(query)
+        consultas = []
+        for result in results:
+            consultas.append(Consulta(**result))
+        return consultas
+    
     def confirmar(self):
         """Confirma uma consulta"""
         self.status = 'confirmada'

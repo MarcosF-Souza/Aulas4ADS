@@ -4,6 +4,7 @@ from database.database import Database
 from tkinter import messagebox
 from .paciente_controller import PacienteController
 from .medico_controller import MedicoController
+from .admin_controller import AdminController # Importar AdminController
 
 class MainController:
     def __init__(self, app):
@@ -15,6 +16,7 @@ class MainController:
         # Inicializar controllers específicos
         self.paciente_controller = PacienteController(self)
         self.medico_controller = MedicoController(self)
+        self.admin_controller = AdminController(self) # Instanciar AdminController
     
     # Métodos de navegação
     def abrir_login_paciente(self):
@@ -122,7 +124,7 @@ class MainController:
     def abrir_minha_agenda(self):
         self.medico_controller.abrir_minha_agenda()
     
-    def abrir_consultas_dia(self):
+    def abrir_consultas_do_dia(self):
         self.medico_controller.abrir_consultas_do_dia()
     
     def abrir_prontuarios(self):
@@ -134,33 +136,22 @@ class MainController:
     def abrir_relatorios_medico(self):
         self.medico_controller.abrir_relatorios()
     
+    # Administrador
+    def abrir_gerenciamento_medicos(self):
+        self.admin_controller.abrir_gerenciamento_medicos()
+    
+    def abrir_gerenciamento_pacientes(self):
+        self.admin_controller.abrir_gerenciamento_pacientes()
+    
+    def abrir_agenda_geral(self):
+        self.admin_controller.abrir_agenda_geral()
+    
+    def abrir_relatorios_admin(self):
+        self.admin_controller.abrir_relatorios_admin()
+    
     # Placeholders para outras funcionalidades
     def abrir_remarcacao_consulta(self):
         messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de remarcação em desenvolvimento")
-    
-    def abrir_cancelamento_consulta(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de cancelamento em desenvolvimento")
-    
-    def abrir_historico_consultas(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de histórico em desenvolvimento")
-    
-    def abrir_estatisticas_paciente(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de estatísticas em desenvolvimento")
-    
-    def abrir_prescricoes(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de prescrições em desenvolvimento")
-    
-    def abrir_gerenciamento_medicos(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de gerenciamento de médicos em desenvolvimento")
-    
-    def abrir_gerenciamento_pacientes(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de gerenciamento de pacientes em desenvolvimento")
-    
-    def abrir_agenda_geral(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de agenda geral em desenvolvimento")
-    
-    def abrir_relatorios_admin(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de relatórios administrativos em desenvolvimento")
     
     def abrir_configuracoes(self):
         messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de configurações em desenvolvimento")

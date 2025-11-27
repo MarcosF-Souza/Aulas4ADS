@@ -1,30 +1,29 @@
+from models.usuario import Usuario
 from database.database import Database
 
-class Paciente:
+class Paciente(Usuario):
     def __init__(self, id=None, nome=None, email=None, telefone=None, data_nascimento=None, 
                  endereco=None, senha=None, ativo=True, data_criacao=None):
-        self.id = id
-        self.nome = nome
-        self.email = email
-        self.telefone = telefone
+        super().__init__(id, nome, email, telefone, senha, ativo, data_criacao)
         self.data_nascimento = data_nascimento
         self.endereco = endereco
-        self.senha = senha
-        self.ativo = ativo
-        self.data_criacao = data_criacao
+        self.tipo = 'paciente'
     
     def salvar(self):
-        """Salva o paciente no banco (CREATE)"""
+        """Salva o paciente no banco (CREATE/UPDATE)"""
         db = Database()
         if self.id is None:
+            # Novo paciente (CREATE)
             query = """
             INSERT INTO pacientes (nome, email, telefone, data_nascimento, endereco, senha)
             VALUES (?, ?, ?, ?, ?, ?)
             """
             params = (self.nome, self.email, self.telefone, self.data_nascimento, 
                      self.endereco, self.senha)
-            return db.execute_query(query, params)
+            self.id = db.execute_query(query, params)
+            return self.id is not None
         else:
+            # Atualizar paciente (UPDATE)
             query = """
             UPDATE pacientes 
             SET nome=?, email=?, telefone=?, data_nascimento=?, endereco=?, senha=?, ativo=?
@@ -34,6 +33,10 @@ class Paciente:
                      self.endereco, self.senha, self.ativo, self.id)
             return db.execute_query(query, params)
     
+    def autenticar(self, email, senha):
+        """Autentica o paciente com base no email e senha"""
+        return super().autenticar_sistema(email, senha, self.tipo)
+
     @staticmethod
     def buscar_por_id(id):
         """Busca paciente por ID (READ)"""
@@ -65,8 +68,6 @@ class Paciente:
             pacientes.append(Paciente(**result))
         return pacientes
     
-    def excluir(self):
-        """Exclui o paciente (DELETE) - exclusão lógica"""
-        db = Database()
-        query = "UPDATE pacientes SET ativo = 0 WHERE id = ?"
-        return db.execute_query(query, (self.id,))
+    # O método 'excluir' (desativar) é herdado da classe Usuario
+    # def excluir(self):
+    #     return self.desativar()

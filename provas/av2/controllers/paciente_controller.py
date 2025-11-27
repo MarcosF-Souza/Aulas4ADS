@@ -115,27 +115,24 @@ class PacienteController:
     
     def verificar_disponibilidade(self):
         """Verifica a disponibilidade do médico na data e horário selecionados"""
-        # Limpar informações anteriores
         for widget in self.info_frame.winfo_children():
             widget.destroy()
-        
+
         medico_selecionado = self.medico_var.get()
         data = self.data_var.get()
-        horario = self.horario_var.get()
-        
-        if not medico_selecionado or not data or not horario:
+        horario_selecionado = self.horario_var.get()
+
+        if not medico_selecionado or not data or not horario_selecionado:
             messagebox.showwarning("Atenção", "Por favor, preencha todos os campos!")
             return
-        
-        # Validar formato da data (mas não verificar se é data passada)
+
         try:
             data_dt = datetime.strptime(data, '%d/%m/%Y')
             data_db = data_dt.strftime('%Y-%m-%d')
         except ValueError:
             messagebox.showerror("Erro", "Formato de data inválido! Use DD/MM/AAAA.")
             return
-        
-        # Extrair CRM do médico selecionado
+
         try:
             crm = medico_selecionado.split("(CRM: ")[1].replace(")", "")
         except IndexError:
@@ -143,51 +140,57 @@ class PacienteController:
             return
             
         medico = Medico.buscar_por_crm(crm)
-        
         if not medico:
             messagebox.showerror("Erro", "Médico não encontrado!")
             return
+
+        horarios_agenda = Agenda.buscar_disponiveis_por_medico_e_data(medico.id, data_db)
+        consultas_marcadas = Consulta.buscar_por_medico_e_data(medico.id, data_db)
         
-        # DEBUG: Mostrar informações para diagnóstico
-        print(f"DEBUG: Médico ID: {medico.id}, Data: {data_db}, Horário: {horario}")
+        horarios_ocupados = {c.hora_consulta for c in consultas_marcadas}
         
-        # Verificar disponibilidade - AGORA SEMPRE RETORNA DISPONÍVEL
-        # Para qualquer data e horário, consideramos disponível
-        horario_disponivel = True
-        horario_obj = None  # Não usamos mais o objeto real da agenda
-        
-        # Mostrar informações de disponibilidade
+        horario_disponivel = False
+        for agenda_horario in horarios_agenda:
+            if horario_selecionado >= agenda_horario.hora_inicio and horario_selecionado < agenda_horario.hora_fim:
+                if horario_selecionado not in horarios_ocupados:
+                    horario_disponivel = True
+                    break
+
         self.info_frame.grid()
         
         if horario_disponivel:
-            # Configurar estilo para disponível
             self.info_frame.configure(bg='#d4edda')
-            
             tk.Label(self.info_frame, text="✅ HORÁRIO DISPONÍVEL", 
                     font=('Arial', 12, 'bold'), bg='#d4edda', fg='#155724').pack(pady=10)
             
-            info_text = f"• Médico: Dr. {medico.nome}\n• Data: {data}\n• Horário: {horario}\n• Especialidade: {medico.especialidade}"
+            info_text = f"• Médico: Dr. {medico.nome}\n• Data: {data}\n• Horário: {horario_selecionado}\n• Especialidade: {medico.especialidade}"
             tk.Label(self.info_frame, text=info_text, 
                     font=('Arial', 10), bg='#d4edda', fg='#155724', justify='left').pack(pady=(0, 10))
             
-            # Habilitar e configurar botão de confirmar
             self.btn_confirmar.configure(
                 bg='#28a745', 
                 state="normal", 
-                command=lambda: self.confirmar_consulta(medico, data_db, horario)
+                command=lambda: self.confirmar_consulta(medico, data_db, horario_selecionado)
             )
-            
         else:
-            # Configurar estilo para indisponível
             self.info_frame.configure(bg='#f8d7da')
-            
             tk.Label(self.info_frame, text="❌ HORÁRIO INDISPONÍVEL", 
                     font=('Arial', 12, 'bold'), bg='#f8d7da', fg='#721c24').pack(pady=10)
             
-            tk.Label(self.info_frame, text="Tente outra data ou horário.", 
-                    font=('Arial', 10), bg='#f8d7da', fg='#721c24').pack(pady=(0, 10))
-            
-            # Desabilitar botão de confirmar
+            # Sugerir próximos horários livres
+            proximos_horarios = []
+            for agenda_horario in horarios_agenda:
+                if agenda_horario.hora_inicio not in horarios_ocupados:
+                    proximos_horarios.append(agenda_horario.hora_inicio)
+
+            if proximos_horarios:
+                sugestoes = ", ".join(proximos_horarios[:3])
+                tk.Label(self.info_frame, text=f"Horários livres próximos: {sugestoes}", 
+                        font=('Arial', 10), bg='#f8d7da', fg='#721c24').pack(pady=(0, 10))
+            else:
+                tk.Label(self.info_frame, text="Não há horários livres para este dia.", 
+                        font=('Arial', 10), bg='#f8d7da', fg='#721c24').pack(pady=(0, 10))
+
             self.btn_confirmar.configure(bg='#95a5a6', state="disabled")
     
     def confirmar_consulta(self, medico, data_db, horario):
@@ -311,13 +314,117 @@ class PacienteController:
         btn_fechar.pack(side='right', padx=5)
     
     def remarcar_consulta(self, tree):
-        """Remarca uma consulta selecionada"""
+        """Abre uma nova janela para remarcar uma consulta selecionada."""
         selecionado = tree.selection()
         if not selecionado:
             messagebox.showwarning("Atenção", "Selecione uma consulta para remarcar!")
             return
         
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de remarcação em desenvolvimento")
+        item_selecionado = tree.item(selecionado[0])
+        valores = item_selecionado['values']
+
+        # Extrair dados da consulta selecionada
+        # Assumindo que os valores na treeview são: Data, Hora, Médico, Especialidade, Status, Motivo
+        data_consulta_str = valores[0]
+        hora_consulta_str = valores[1]
+        medico_nome = valores[2]
+        
+        # Buscar a consulta original no banco de dados para obter o ID
+        consultas_paciente = Consulta.buscar_por_paciente(self.main_controller.usuario_logado.id)
+        consulta_original = None
+        for c in consultas_paciente:
+            if c.data_consulta == data_consulta_str and c.hora_consulta == hora_consulta_str and c.medico_nome == medico_nome:
+                consulta_original = c
+                break
+        
+        if not consulta_original:
+            messagebox.showerror("Erro", "Não foi possível encontrar os detalhes da consulta para remarcação.")
+            return
+
+        # Criar nova janela para remarcação
+        janela_remarcar = tk.Toplevel(self.main_controller.app.root)
+        janela_remarcar.title("Remarcar Consulta")
+        janela_remarcar.geometry("400x300")
+        janela_remarcar.configure(bg='#f8f9fa')
+        janela_remarcar.transient(self.main_controller.app.root)
+        janela_remarcar.grab_set()
+
+        # Centralizar a janela
+        janela_remarcar.update_idletasks()
+        x = (janela_remarcar.winfo_screenwidth() // 2) - (400 // 2)
+        y = (janela_remarcar.winfo_screenheight() // 2) - (300 // 2)
+        janela_remarcar.geometry(f"400x300+{x}+{y}")
+        
+        frame = tk.Frame(janela_remarcar, bg='#f8f9fa', padx=20, pady=20)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(frame, text=f"Remarcar Consulta com Dr. {medico_nome}", font=('Arial', 12, 'bold'), bg='#f8f9fa').pack(pady=10)
+        
+        tk.Label(frame, text="Nova Data (DD/MM/AAAA):", bg='#f8f9fa').pack(pady=5)
+        nova_data_var = tk.StringVar()
+        entry_nova_data = tk.Entry(frame, textvariable=nova_data_var)
+        entry_nova_data.pack(pady=5)
+
+        tk.Label(frame, text="Novo Horário (HH:MM):", bg='#f8f9fa').pack(pady=5)
+        novo_horario_var = tk.StringVar()
+        entry_novo_horario = tk.Entry(frame, textvariable=novo_horario_var)
+        entry_novo_horario.pack(pady=5)
+
+        def confirmar_remarcacao():
+            nova_data = nova_data_var.get()
+            novo_horario = novo_horario_var.get()
+
+            if not nova_data or not novo_horario:
+                messagebox.showwarning("Atenção", "Preencha a nova data e o novo horário.")
+                return
+
+            try:
+                # Validar formato da data
+                nova_data_dt = datetime.strptime(nova_data, '%d/%m/%Y')
+                nova_data_db = nova_data_dt.strftime('%Y-%m-%d')
+            except ValueError:
+                messagebox.showerror("Erro", "Formato de data inválido! Use DD/MM/AAAA.")
+                return
+            
+            # Validar formato da hora (HH:MM)
+            try:
+                datetime.strptime(novo_horario, '%H:%M')
+            except ValueError:
+                messagebox.showerror("Erro", "Formato de horário inválido! Use HH:MM.")
+                return
+
+            # Verificar disponibilidade
+            medico_obj = Medico.buscar_por_nome(medico_nome.replace("Dr. ", "")) # Assumindo que o nome do médico é único ou há outra forma de identificar
+            if not medico_obj:
+                messagebox.showerror("Erro", "Médico não encontrado no sistema.")
+                return
+            
+            horarios_agenda = Agenda.buscar_disponiveis_por_medico_e_data(medico_obj.id, nova_data_db)
+            consultas_marcadas = Consulta.buscar_por_medico_e_data(medico_obj.id, nova_data_db)
+            horarios_ocupados = {c.hora_consulta for c in consultas_marcadas}
+            
+            disponivel = False
+            for agenda_horario in horarios_agenda:
+                if novo_horario >= agenda_horario.hora_inicio and novo_horario < agenda_horario.hora_fim:
+                    if novo_horario not in horarios_ocupados:
+                        disponivel = True
+                        break
+            
+            if not disponivel:
+                messagebox.showwarning("Indisponível", "O horário selecionado não está disponível para este médico.")
+                return
+
+            # Remarcar consulta
+            if consulta_original.remarcar(nova_data_db, novo_horario):
+                messagebox.showinfo("Sucesso", "Consulta remarcada com sucesso!")
+                janela_remarcar.destroy()
+                # Atualizar a treeview principal
+                self.abrir_minhas_consultas() # Reabre a janela de minhas consultas para atualizar a lista
+            else:
+                messagebox.showerror("Erro", "Falha ao remarcar consulta.")
+
+        btn_confirmar = tk.Button(frame, text="Confirmar Remarcação", command=confirmar_remarcacao)
+        btn_confirmar.pack(pady=10)
     
     def cancelar_consulta(self, tree):
         """Cancela uma consulta selecionada"""
