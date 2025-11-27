@@ -1,0 +1,1 @@
+# Este arquivo torna o diretório 'database' em um pacote Python

@@ -1,50 +1,85 @@
+import tkinter as tk
+from tkinter import ttk
+
 class MainView:
-    """Classe responsável pela visualização do menu principal do sistema."""
-    
-    @staticmethod
-    def exibir_menu_principal():
-        """Exibe o menu principal do sistema de agendamento médico."""
-        print("\n" + "="*50)
-        print("    SISTEMA DE AGENDAMENTO DE CONSULTAS MÉDICAS")
-        print("="*50)
-        print("1. Acesso Paciente")
-        print("2. Acesso Médico") 
-        print("3. Acesso Administrador")
-        print("0. Sair")
-        print("-"*50)
+    def __init__(self, root, controller):
+        self.root = root
+        self.controller = controller
+        self.frame = ttk.Frame(root)
         
-        opcao = input("Digite a opção desejada: ")
-        return opcao
+        self._criar_widgets()
     
-    @staticmethod
-    def exibir_mensagem(mensagem):
-        """Exibe uma mensagem para o usuário."""
-        print(f"\n{mensagem}")
+    def _criar_widgets(self):
+        # Título
+        titulo = tk.Label(
+            self.frame, 
+            text="SISTEMA DE AGENDAMENTO DE CONSULTAS MÉDICAS",
+            font=('Arial', 16, 'bold'),
+            fg='darkblue'
+        )
+        titulo.pack(pady=(0, 40))
+        
+        # Subtítulo
+        subtitulo = tk.Label(
+            self.frame,
+            text="Selecione o tipo de acesso:",
+            font=('Arial', 12)
+        )
+        subtitulo.pack(pady=(0, 30))
+        
+        # Container para os botões
+        botoes_frame = tk.Frame(self.frame)
+        botoes_frame.pack(pady=20)
+        
+        # Botões de acesso
+        botoes = [
+            ("👤 ACESSO PACIENTE", self.acessar_paciente, "#4CAF50"),
+            ("👨‍⚕️ ACESSO MÉDICO", self.acessar_medico, "#2196F3"),
+            ("⚙️ ACESSO ADMINISTRADOR", self.acessar_admin, "#FF9800"),
+        ]
+        
+        for texto, comando, cor in botoes:
+            btn = tk.Button(
+                botoes_frame,
+                text=texto,
+                font=('Arial', 11, 'bold'),
+                bg=cor,
+                fg='white',
+                width=25,
+                height=3,
+                relief='raised',
+                bd=3,
+                command=comando
+            )
+            btn.pack(pady=15, padx=20)
+        
+        # Botão sair
+        btn_sair = tk.Button(
+            self.frame,
+            text="🚪 SAIR DO SISTEMA",
+            font=('Arial', 10),
+            bg='#f44336',
+            fg='white',
+            width=20,
+            height=2,
+            command=self.sair
+        )
+        btn_sair.pack(pady=30)
     
-    @staticmethod
-    def exibir_erro(mensagem):
-        """Exibe uma mensagem de erro."""
-        print(f"\n⚠️  ERRO: {mensagem}")
+    def acessar_paciente(self):
+        self.controller.abrir_login_paciente()
     
-    @staticmethod
-    def exibir_sucesso(mensagem):
-        """Exibe uma mensagem de sucesso."""
-        print(f"\n✅ {mensagem}")
+    def acessar_medico(self):
+        self.controller.abrir_login_medico()
     
-    @staticmethod
-    def limpar_tela():
-        """Limpa a tela do console (funciona em Windows e Unix)."""
-        import os
-        os.system('cls' if os.name == 'nt' else 'clear')
+    def acessar_admin(self):
+        self.controller.abrir_login_admin()
     
-    @staticmethod
-    def aguardar_enter():
-        """Aguarda o usuário pressionar Enter para continuar."""
-        input("\nPressione Enter para continuar...")
+    def sair(self):
+        self.controller.sair_sistema()
     
-    @staticmethod
-    def cabecalho(titulo):
-        """Exibe um cabeçalho formatado."""
-        print("\n" + "="*50)
-        print(f"    {titulo}")
-        print("="*50)
+    def mostrar(self):
+        self.frame.pack(fill="both", expand=True)
+    
+    def ocultar(self):
+        self.frame.pack_forget()

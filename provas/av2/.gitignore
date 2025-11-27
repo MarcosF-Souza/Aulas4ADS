@@ -1,0 +1,158 @@
+# ================================
+# .gitignore para Projeto Python
+# Sistema de Agendamento Médico
+# ================================
+
+# ========== PYTHON ==========
+# Arquivos compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ========== ENVIRONMENT ==========
+# Ambientes virtuais
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*
+
+# ========== IDE ==========
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse
+.pydevproject
+.project
+.metadata
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.classpath
+.settings/
+.loadpath
+
+# Sublime Text
+*.sublime-*
+
+# ========== SYSTEM ==========
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+# ========== DATABASE ==========
+# Arquivos de banco de dados (SQLite)
+# COMENTE A LINHA ABAIXO SE QUISER VERSIONAR O BANCO DE DADOS
+#*.db
+#*.sqlite
+#*.sqlite3
+*.db-journal
+*.sqlite-journal
+
+# Backup de banco de dados
+*.backup
+*.bak
+
+# ========== LOGS ==========
+# Arquivos de log
+*.log
+logs/
+log/
+
+# ========== TEMPORARY FILES ==========
+# Arquivos temporários
+*.tmp
+*.temp
+.cache/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# ========== CONFIGURAÇÕES ==========
+# Arquivos de configuração local (não versionar senhas!)
+config.ini
+config_local.py
+settings_local.py
+secrets.py
+*.key
+*.pem
+*.crt
+
+# ========== DOCUMENTAÇÃO ==========
+# Documentação gerada
+docs/_build/
+build_docs/
+
+# ========== TESTES ==========
+# Coverage reports
+.coverage
+htmlcov/
+.coverage.*
+.pytest_cache/
+
+# ========== PYINSTALLER ==========
+# PyInstaller output
+*.spec
+dist/
+build/
+
+# ========== JUPYTER NOTEBOOK ==========
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# ========== OUTROS ==========
+# Arquivos de projeto específicos
+instance/
+.webassets-cache
+.scrapy
+
+# ================================
+# FIM DO .gitignore
+# ================================
