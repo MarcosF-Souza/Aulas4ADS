@@ -1,7 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
-
-# Import das views
+from tkinter import ttk
 from views.main_view import MainView
 from views.paciente.login_view import LoginPacienteView
 from views.paciente.cadastro_view import CadastroPacienteView
@@ -10,7 +8,6 @@ from views.medico.login_view import LoginMedicoView
 from views.medico.menu_view import MenuMedicoView
 from views.admin.login_view import LoginAdminView
 from views.admin.menu_view import MenuAdminView
-
 from controllers.main_controller import MainController
 
 class Application:
@@ -19,6 +16,9 @@ class Application:
         self.root.title("Sistema de Agendamento de Consultas Médicas")
         self.root.geometry("900x700")
         self.root.configure(bg='white')
+        
+        # Configurar estilo para botões de destaque
+        self.configurar_estilos()
         
         # Inicializar controller
         self.controller = MainController(self)
@@ -32,6 +32,20 @@ class Application:
         # Mostrar a view principal
         self.mostrar_view("MainView")
         
+    def configurar_estilos(self):
+        """Configura estilos personalizados para a aplicação"""
+        style = ttk.Style()
+        
+        # Estilo para botão de destaque (accent)
+        style.configure('Accent.TButton', 
+                       foreground='white',
+                       background='#007acc',
+                       font=('Arial', 10, 'bold'))
+        
+        style.map('Accent.TButton',
+                 background=[('active', '#005a9e'),
+                           ('pressed', '#004a7c')])
+    
     def _inicializar_views(self):
         """Inicializa todas as views do sistema"""
         self.views["MainView"] = MainView(self.root, self.controller)

@@ -2,6 +2,8 @@ from models.paciente import Paciente
 from models.medico import Medico
 from database.database import Database
 from tkinter import messagebox
+from .paciente_controller import PacienteController
+from .medico_controller import MedicoController
 
 class MainController:
     def __init__(self, app):
@@ -9,6 +11,10 @@ class MainController:
         self.db = Database()
         self.db.init_database()
         self.usuario_logado = None
+        
+        # Inicializar controllers específicos
+        self.paciente_controller = PacienteController(self)
+        self.medico_controller = MedicoController(self)
     
     # Métodos de navegação
     def abrir_login_paciente(self):
@@ -88,7 +94,11 @@ class MainController:
             return False
     
     def fazer_login_admin(self, usuario, senha):
-        if usuario == 'admin' and senha == 'admin123':
+        """Buscar administrador no banco de dados"""
+        admin = self.db.fetch_one("SELECT * FROM administradores WHERE usuario = ? AND senha = ?", (usuario, senha))
+        
+        if admin:
+            self.usuario_logado = admin
             self.app.mostrar_view("MenuAdmin")
             self.app.views["LoginAdmin"].limpar_campos()
             return True
@@ -96,11 +106,64 @@ class MainController:
             messagebox.showerror("Erro", "Usuário ou senha inválidos!")
             return False
     
-    # Métodos para funcionalidades (a implementar)
-    def abrir_agendamento_consulta(self):
-        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de agendamento em desenvolvimento")
+    # Métodos delegados para os controllers específicos
     
+    # Paciente
+    def abrir_agendamento_consulta(self):
+        self.paciente_controller.abrir_agendamento_consulta()
+    
+    def abrir_minhas_consultas(self):
+        self.paciente_controller.abrir_minhas_consultas()
+    
+    def abrir_meu_perfil(self):
+        self.paciente_controller.abrir_meu_perfil()
+    
+    # Médico
+    def abrir_minha_agenda(self):
+        self.medico_controller.abrir_minha_agenda()
+    
+    def abrir_consultas_dia(self):
+        self.medico_controller.abrir_consultas_do_dia()
+    
+    def abrir_prontuarios(self):
+        self.medico_controller.ver_prontuario(None)  # Será chamado com treeview específica
+    
+    def abrir_gerenciamento_agenda(self):
+        self.medico_controller.abrir_gerenciar_agenda()
+    
+    def abrir_relatorios_medico(self):
+        self.medico_controller.abrir_relatorios()
+    
+    # Placeholders para outras funcionalidades
     def abrir_remarcacao_consulta(self):
         messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de remarcação em desenvolvimento")
     
-    # ... outros métodos para as funcionalidades
+    def abrir_cancelamento_consulta(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de cancelamento em desenvolvimento")
+    
+    def abrir_historico_consultas(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de histórico em desenvolvimento")
+    
+    def abrir_estatisticas_paciente(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de estatísticas em desenvolvimento")
+    
+    def abrir_prescricoes(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de prescrições em desenvolvimento")
+    
+    def abrir_gerenciamento_medicos(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de gerenciamento de médicos em desenvolvimento")
+    
+    def abrir_gerenciamento_pacientes(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de gerenciamento de pacientes em desenvolvimento")
+    
+    def abrir_agenda_geral(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de agenda geral em desenvolvimento")
+    
+    def abrir_relatorios_admin(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de relatórios administrativos em desenvolvimento")
+    
+    def abrir_configuracoes(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de configurações em desenvolvimento")
+    
+    def abrir_controle_acessos(self):
+        messagebox.showinfo("Em Desenvolvimento", "Funcionalidade de controle de acessos em desenvolvimento")
