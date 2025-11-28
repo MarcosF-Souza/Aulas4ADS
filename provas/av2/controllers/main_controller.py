@@ -8,6 +8,7 @@ from .medico_controller import MedicoController
 from .admin_controller import AdminController
 from .consulta_controller import ConsultaController
 from tkinter import messagebox
+from views.paciente.remarcar_consulta_view import RemarcarConsultaView
 
 class MainController:
     def __init__(self, app):
@@ -484,3 +485,21 @@ class MainController:
         except Exception as e:
             print(f"Erro ao obter ID do médico: {e}")
             return None
+        
+    def mostrar_remarcar_consulta(self, consulta):
+        """Mostra a tela de remarcação de consulta"""
+        print("🎯 Navegando para RemarcarConsulta")
+        # Registrar a view de remarcação se não existir
+        if "RemarcarConsulta" not in self.app.views:
+            self.app.views["RemarcarConsulta"] = RemarcarConsultaView(self.app.root, self, consulta)
+        
+        # Atualizar a consulta na view (caso já exista)
+        if hasattr(self.app.views["RemarcarConsulta"], 'consulta'):
+            self.app.views["RemarcarConsulta"].consulta = consulta
+        
+        self.app.mostrar_view("RemarcarConsulta")
+
+    def mostrar_minhas_consultas(self):
+        """Mostra a tela de minhas consultas após remarcação"""
+        print("🎯 Navegando para MinhasConsultas")
+        self.app.mostrar_view("MinhasConsultas")

@@ -277,9 +277,24 @@ class MinhasConsultasView:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao cancelar consulta: {str(e)}")
     
-    def remarcar_consulta(self, consulta):
-        messagebox.showinfo("Remarcar", "Funcionalidade de remarcação em desenvolvimento.")
-        # Aqui você poderia abrir a tela de agendamento com os dados preenchidos
+    def remarcar_consulta(self, consulta_formatada):
+        """Abre a tela de remarcação para a consulta selecionada"""
+        try:
+            # Encontrar o objeto Consulta original baseado no ID
+            consulta_objeto = None
+            for consulta in self.controller.buscar_consultas_por_paciente(self.controller.obter_usuario_logado().id):
+                if consulta.id == consulta_formatada['id']:
+                    consulta_objeto = consulta
+                    break
+            
+            if consulta_objeto:
+                # Chamar o controller para mostrar a tela de remarcação
+                self.controller.mostrar_remarcar_consulta(consulta_objeto)
+            else:
+                messagebox.showerror("Erro", "Consulta não encontrada para remarcação.")
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao abrir remarcação: {str(e)}")
     
     def voltar(self):
         self.controller.mostrar_menu_paciente()
