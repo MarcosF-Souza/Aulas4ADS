@@ -65,6 +65,7 @@ class Application:
         self.views["MenuPaciente"] = MenuPacienteView(self.root, self.controller)
         self.views["AgendarConsulta"] = AgendarConsultaView(self.root, self.controller)
         self.views["MinhasConsultas"] = MinhasConsultasView(self.root, self.controller)
+        self.views["MeusDados"] = MeusDadosView(self.root, self.controller)
         print("✅ Views do paciente inicializadas")
         
         # Views do médico
@@ -79,6 +80,8 @@ class Application:
         print("✅ Views do admin inicializadas")
         
         print("🎉 Todas as views foram inicializadas com sucesso!")
+
+        print("📋 Views registradas:", list(self.views.keys()))
     
     def mostrar_view(self, nome_view):
         """Mostra a view especificada e oculta as outras"""
