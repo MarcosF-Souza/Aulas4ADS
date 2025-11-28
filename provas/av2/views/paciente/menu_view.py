@@ -93,7 +93,7 @@ class MenuPacienteView:
         self.controller.mostrar_meus_dados()
     
     def meus_prontuarios(self):
-        messagebox.showinfo("Prontuários", "Funcionalidade de prontuários em desenvolvimento")
+        self.controller.mostrar_meus_prontuarios()
     
     def sair(self):
         self.controller.voltar_principal()

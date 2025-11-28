@@ -2,8 +2,9 @@ from database.database import Database
 
 class Consulta:
     def __init__(self, id=None, id_paciente=None, id_medico=None, data_consulta=None, 
-                 hora_consulta=None, status='agendada', motivo=None, observacoes=None, 
-                 data_criacao=None, paciente_nome=None, medico_nome=None, especialidade=None):
+                hora_consulta=None, status='agendada', motivo=None, observacoes=None, 
+                data_criacao=None, paciente_nome=None, medico_nome=None, especialidade=None,
+                diagnostico=None, prescricao=None, observacoes_medicas=None):  # ✅ NOVOS CAMPOS
         self.id = id
         self.id_paciente = id_paciente
         self.id_medico = id_medico
@@ -17,6 +18,10 @@ class Consulta:
         self.paciente_nome = paciente_nome
         self.medico_nome = medico_nome
         self.especialidade = especialidade
+        # ✅ NOVOS CAMPOS PARA PRONTUÁRIOS
+        self.diagnostico = diagnostico
+        self.prescricao = prescricao
+        self.observacoes_medicas = observacoes_medicas
     
     def salvar(self):
         """Salva ou atualiza a consulta"""
@@ -24,29 +29,31 @@ class Consulta:
             return self._criar()
         else:
             return self._atualizar()
-    
+        
     def _criar(self):
         """Cria uma nova consulta"""
         query = """
-        INSERT INTO consultas (id_paciente, id_medico, data_consulta, hora_consulta, status, motivo, observacoes)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO consultas (id_paciente, id_medico, data_consulta, hora_consulta, status, motivo, observacoes, diagnostico, prescricao, observacoes_medicas)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         params = (self.id_paciente, self.id_medico, self.data_consulta, 
-                 self.hora_consulta, self.status, self.motivo, self.observacoes)
+                self.hora_consulta, self.status, self.motivo, self.observacoes, 
+                self.diagnostico, self.prescricao, self.observacoes_medicas)  # ✅ NOVOS CAMPOS
         
         db = Database()
         self.id = db.executar_query(query, params, retornar_id=True)
         return self.id
-    
+        
     def _atualizar(self):
         """Atualiza uma consulta existente"""
         query = """
         UPDATE consultas 
-        SET id_paciente=?, id_medico=?, data_consulta=?, hora_consulta=?, status=?, motivo=?, observacoes=?
+        SET id_paciente=?, id_medico=?, data_consulta=?, hora_consulta=?, status=?, motivo=?, observacoes=?, diagnostico=?, prescricao=?, observacoes_medicas=?
         WHERE id=?
         """
         params = (self.id_paciente, self.id_medico, self.data_consulta, 
-                 self.hora_consulta, self.status, self.motivo, self.observacoes, self.id)
+                self.hora_consulta, self.status, self.motivo, self.observacoes, 
+                self.diagnostico, self.prescricao, self.observacoes_medicas, self.id)  # ✅ NOVOS CAMPOS
         
         db = Database()
         db.executar_query(query, params)
@@ -88,7 +95,11 @@ class Consulta:
                 data_consulta=resultado['data_consulta'],
                 hora_consulta=resultado['hora_consulta'],
                 motivo=resultado['motivo'],
-                status=resultado['status']
+                status=resultado['status'],
+                observacoes=resultado['observacoes'],
+                diagnostico=resultado.get('diagnostico'),  # ✅ NOVO CAMPO
+                prescricao=resultado.get('prescricao'),    # ✅ NOVO CAMPO
+                observacoes_medicas=resultado.get('observacoes_medicas')  # ✅ NOVO CAMPO
             )
             consultas.append(consulta)
         
@@ -207,10 +218,13 @@ class Consulta:
         self.motivo_cancelamento = motivo
         return self.salvar()
     
-    def finalizar(self, observacoes_medicas=None):
-        """Finaliza uma consulta"""
-        observacoes = f"Finalizada: {observacoes_medicas}" if observacoes_medicas else "Consulta finalizada"
-        return self.atualizar_status('realizada', observacoes)
+    def finalizar(self, observacoes_medicas=None, diagnostico=None, prescricao=None):
+        """Finaliza uma consulta com prontuário completo"""
+        self.status = 'realizada'
+        self.observacoes_medicas = observacoes_medicas
+        self.diagnostico = diagnostico
+        self.prescricao = prescricao
+        return self.salvar()
     
     def remarcar(self, nova_data, nova_hora):
         """Remarca uma consulta"""
@@ -250,5 +264,25 @@ class Consulta:
             'data_criacao': self.data_criacao,
             'paciente_nome': self.paciente_nome,
             'medico_nome': self.medico_nome,
-            'especialidade': self.especialidade
+            'especialidade': self.especialidade,
+            'diagnostico': self.diagnostico,  # ✅ NOVO CAMPO
+            'prescricao': self.prescricao,    # ✅ NOVO CAMPO
+            'observacoes_medicas': self.observacoes_medicas  # ✅ NOVO CAMPO
         }
+    
+    @classmethod
+    def atualizar_tabela(cls):
+        """Atualiza a tabela consultas para incluir os novos campos de prontuário"""
+        db = Database()
+        
+        # Verificar se as colunas já existem
+        try:
+            # Tentar adicionar as novas colunas (SQLite ignorará se já existirem)
+            db.executar_query("ALTER TABLE consultas ADD COLUMN diagnostico TEXT")
+            db.executar_query("ALTER TABLE consultas ADD COLUMN prescricao TEXT")
+            db.executar_query("ALTER TABLE consultas ADD COLUMN observacoes_medicas TEXT")
+            print("✅ Tabela consultas atualizada com sucesso!")
+            return True
+        except Exception as e:
+            print(f"⚠️ Aviso ao atualizar tabela: {e}")
+            return False

@@ -503,3 +503,23 @@ class MainController:
         """Mostra a tela de minhas consultas após remarcação"""
         print("🎯 Navegando para MinhasConsultas")
         self.app.mostrar_view("MinhasConsultas")
+
+    def mostrar_meus_prontuarios(self):
+        """Mostra a tela de meus prontuários"""
+        print("🎯 Navegando para MeusProntuarios")
+        
+        # Registrar a view de prontuários se não existir
+        if "MeusProntuarios" not in self.app.views:
+            from views.paciente.meus_prontuarios_view import MeusProntuariosView
+            self.app.views["MeusProntuarios"] = MeusProntuariosView(self.app.root, self)
+        
+        self.app.mostrar_view("MeusProntuarios")
+
+    def buscar_medico_por_id(self, id_medico):
+        """Busca um médico pelo ID (para a view de prontuários)"""
+        try:
+            from models.medico import Medico
+            return Medico.buscar_por_id(id_medico)
+        except Exception as e:
+            print(f"Erro ao buscar médico por ID: {e}")
+            return None
