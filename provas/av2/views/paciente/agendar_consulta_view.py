@@ -43,8 +43,9 @@ class AgendarConsultaView:
             width=40
         )
         self.combo_medico.grid(row=0, column=1, pady=10, padx=10)
+
         # Preencher com médicos (vamos simular por enquanto)
-        self.combo_medico['values'] = ['Dr. Carlos Mendes - Dermatologia', 'Dra. Letícia de Paiva - Cardiologia']
+        self.carregar_medicos()
         
         # Data
         tk.Label(
@@ -128,19 +129,58 @@ class AgendarConsultaView:
         ).grid(row=0, column=1, padx=10)
     
     def agendar_consulta(self):
-        medico = self.medico_var.get()
+        medico_selecionado = self.medico_var.get()
         data = self.data_var.get()
         hora = self.hora_var.get()
         motivo = self.motivo_var.get()
         
-        if not medico or not data or not hora or not motivo:
+        if not medico_selecionado or not data or not hora or not motivo:
             messagebox.showerror("Erro", "Por favor, preencha todos os campos.")
             return
         
-        # Aqui você chamaria o controller para agendar a consulta
-        # Por enquanto, vamos apenas mostrar uma mensagem
-        messagebox.showinfo("Sucesso", f"Consulta agendada com {medico} para {data} às {hora}.")
-        self.voltar()
+        try:
+            # Converter data de DD/MM/AAAA para AAAA-MM-DD
+            data_obj = datetime.strptime(data, '%d/%m/%Y')
+            data_formatada = data_obj.strftime('%Y-%m-%d')
+            
+            # Verificar se data não é no passado
+            if data_obj.date() < datetime.now().date():
+                messagebox.showerror("Erro", "Não é possível agendar consultas para datas passadas.")
+                return
+                
+        except ValueError:
+            messagebox.showerror("Erro", "Formato de data inválido. Use DD/MM/AAAA.")
+            return
+        
+        # Mapear nome do médico para ID (simulação - na prática viria do controller)
+            # ✅ CORREÇÃO: Obter ID do médico através do controller
+        id_medico = self.controller.obter_id_medico_por_nome(medico_selecionado)
+        if not id_medico:
+            messagebox.showerror("Erro", "Médico selecionado inválido.")
+            return
+        
+        # Obter ID do paciente logado
+        paciente_logado = self.controller.obter_usuario_logado()
+        if not paciente_logado or not hasattr(paciente_logado, 'id'):
+            messagebox.showerror("Erro", "Nenhum paciente logado ou sessão inválida.")
+            return
+        
+        id_paciente = paciente_logado.id
+        
+        # ✅ CORREÇÃO: Chamar o controller para agendar a consulta
+        sucesso, mensagem, consulta = self.controller.agendar_consulta(
+            id_paciente=id_paciente,
+            id_medico=id_medico,
+            data_consulta=data_formatada,
+            hora_consulta=hora,
+            motivo=motivo
+        )
+        
+        if sucesso:
+            messagebox.showinfo("Sucesso", mensagem)
+            self.voltar()
+        else:
+            messagebox.showerror("Erro", mensagem)
     
     def voltar(self):
         self.controller.mostrar_menu_paciente()
@@ -150,3 +190,18 @@ class AgendarConsultaView:
     
     def ocultar(self):
         self.frame.pack_forget()
+
+    def carregar_medicos(self):
+        """Carrega a lista de médicos do controller"""
+        try:
+            medicos = self.controller.obter_medicos_para_combobox()
+            if medicos:
+                self.combo_medico['values'] = medicos
+                # Selecionar o primeiro médico por padrão
+                self.combo_medico.set(medicos[0])
+            else:
+                self.combo_medico['values'] = ['Nenhum médico disponível']
+                messagebox.showwarning("Aviso", "Nenhum médico cadastrado no sistema.")
+        except Exception as e:
+            print(f"Erro ao carregar médicos: {e}")
+            self.combo_medico['values'] = ['Erro ao carregar médicos']

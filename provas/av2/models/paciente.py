@@ -85,6 +85,29 @@ class Paciente(Usuario):
                 endereco=resultado['endereco']
             )
         return None
+    
+    @classmethod
+    def buscar_por_id(cls, id):
+        """Busca um paciente pelo ID"""
+        db = Database()
+        resultado = db.executar_query(
+            "SELECT * FROM pacientes WHERE id = ?",
+            (id,),
+            fetch_one=True
+        )
+        if resultado:
+            return cls(
+                id=resultado['id'],
+                nome=resultado['nome'],
+                email=resultado['email'],
+                telefone=resultado['telefone'],
+                senha=resultado['senha'],
+                ativo=resultado['ativo'],
+                data_criacao=resultado['data_criacao'],
+                data_nascimento=resultado['data_nascimento'],
+                endereco=resultado['endereco']
+            )
+        return None
 
     @classmethod
     def criar_tabela(cls):

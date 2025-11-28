@@ -427,3 +427,60 @@ class MainController:
         # Por enquanto, vamos mostrar uma mensagem
         from tkinter import messagebox
         messagebox.showinfo("Em desenvolvimento", "Funcionalidade de prescrições em desenvolvimento")
+
+    def buscar_consultas_por_paciente(self, paciente_id):
+        """Busca consultas de um paciente específico"""
+        sucesso, mensagem, consultas = self.consulta_controller.buscar_consultas_por_paciente(paciente_id)
+        if sucesso:
+            return consultas
+        else:
+            print(f"❌ Erro ao buscar consultas: {mensagem}")
+            return []
+        
+    def obter_lista_medicos(self):
+        """Retorna lista de médicos para preencher combobox"""
+        medicos = Medico.buscar_todos()
+        return [f"Dr. {medico.nome} - {medico.especialidade}" for medico in medicos]
+    
+    def obter_medicos_para_combobox(self):
+        """Obtém lista de médicos para preencher combobox na view de agendamento"""
+        try:
+            medicos = Medico.buscar_todos()
+            if not medicos:
+                return []
+            
+            # Formatar: "Dr. Nome - Especialidade"
+            medicos_formatados = []
+            self.mapeamento_medicos = {}  # Para uso posterior
+            
+            for medico in medicos:
+                if medico.ativo:  # Só médicos ativos
+                    texto_medico = f"Dr. {medico.nome} - {medico.especialidade}"
+                    medicos_formatados.append(texto_medico)
+                    self.mapeamento_medicos[texto_medico] = medico.id
+            
+            return medicos_formatados
+            
+        except Exception as e:
+            print(f"Erro ao obter médicos: {e}")
+            return []
+        
+    def obter_id_medico_por_nome(self, texto_medico):
+        """Obtém o ID do médico a partir do texto do combobox"""
+        try:
+            # Usar o mapeamento criado anteriormente
+            if hasattr(self, 'mapeamento_medicos'):
+                return self.mapeamento_medicos.get(texto_medico)
+            
+            # Fallback: buscar no banco se não tiver mapeamento
+            medicos = Medico.buscar_todos()
+            for medico in medicos:
+                texto_formatado = f"Dr. {medico.nome} - {medico.especialidade}"
+                if texto_formatado == texto_medico:
+                    return medico.id
+                    
+            return None
+            
+        except Exception as e:
+            print(f"Erro ao obter ID do médico: {e}")
+            return None

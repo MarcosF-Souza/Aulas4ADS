@@ -71,21 +71,27 @@ class Consulta:
     
     @classmethod
     def buscar_por_paciente(cls, id_paciente):
-        """Busca todas as consultas de um paciente"""
-        query = """
-        SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
-        FROM consultas c
-        LEFT JOIN pacientes p ON c.id_paciente = p.id
-        LEFT JOIN medicos m ON c.id_medico = m.id
-        WHERE c.id_paciente = ?
-        ORDER BY c.data_consulta DESC, c.hora_consulta DESC
-        """
+        """Busca consultas por ID do paciente"""
         db = Database()
-        results = db.executar_query(query, (id_paciente,), fetch_all=True)
+        resultados = db.executar_query(
+            "SELECT * FROM consultas WHERE id_paciente = ? ORDER BY data_consulta, hora_consulta",
+            (id_paciente,),
+            fetch_all=True
+        )
         
         consultas = []
-        for result in results:
-            consultas.append(cls(**result))
+        for resultado in resultados:
+            consulta = cls(
+                id=resultado['id'],
+                id_paciente=resultado['id_paciente'],
+                id_medico=resultado['id_medico'],
+                data_consulta=resultado['data_consulta'],
+                hora_consulta=resultado['hora_consulta'],
+                motivo=resultado['motivo'],
+                status=resultado['status']
+            )
+            consultas.append(consulta)
+        
         return consultas
     
     @classmethod
@@ -195,9 +201,11 @@ class Consulta:
         """Confirma uma consulta"""
         return self.atualizar_status('confirmada')
     
-    def cancelar(self, motivo="Cancelada"):
-        """Cancela uma consulta"""
-        return self.atualizar_status('cancelada', f"Cancelamento: {motivo}")
+    def cancelar(self, motivo="Cancelado pelo paciente"):
+        """Cancela a consulta"""
+        self.status = 'cancelada'
+        self.motivo_cancelamento = motivo
+        return self.salvar()
     
     def finalizar(self, observacoes_medicas=None):
         """Finaliza uma consulta"""
