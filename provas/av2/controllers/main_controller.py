@@ -345,6 +345,10 @@ class MainController:
         return self.consulta_controller.remarcar_consulta(
             consulta_id, nova_data, nova_hora, novo_motivo
         )
+    
+    def finalizar_consulta(self, consulta_id, observacoes_medicas=None):
+        """Finaliza uma consulta (marca como realizada)"""
+        return self.consulta_controller.finalizar_consulta(consulta_id, observacoes_medicas)
 
     # === UTILITÁRIOS ===
     def obter_usuario_logado(self):
@@ -438,6 +442,15 @@ class MainController:
             print(f"❌ Erro ao buscar consultas: {mensagem}")
             return []
         
+    def buscar_consultas_por_medico(self, medico_id):
+        """Busca consultas de um médico específico"""
+        sucesso, mensagem, consultas = self.consulta_controller.buscar_consultas_por_medico(medico_id)
+        if sucesso:
+            return consultas
+        else:
+            print(f"❌ Erro ao buscar consultas do médico: {mensagem}")
+            return []
+        
     def obter_lista_medicos(self):
         """Retorna lista de médicos para preencher combobox"""
         medicos = Medico.buscar_todos()
@@ -523,3 +536,19 @@ class MainController:
         except Exception as e:
             print(f"Erro ao buscar médico por ID: {e}")
             return None
+        
+    def mostrar_prontuarios_medico(self):
+        """Mostra a tela de prontuários do médico"""
+        print("🎯 Navegando para ProntuariosMedico")
+        
+        # Registrar a view se não existir
+        if "ProntuariosMedico" not in self.app.views:
+            from views.medico.prontuarios_medico_view import ProntuariosMedicoView
+            self.app.views["ProntuariosMedico"] = ProntuariosMedicoView(self.app.root, self)
+        
+        self.app.mostrar_view("ProntuariosMedico")
+
+    def salvar_prontuario(self, consulta_id, diagnostico, prescricao, observacoes):
+        """Salva o prontuário de uma consulta"""
+        return self.consulta_controller.salvar_prontuario(consulta_id, diagnostico, prescricao, observacoes)
+    

@@ -116,3 +116,8 @@ class MedicoController:
                 'especialidade': getattr(self.main_controller.usuario_logado, 'especialidade', '')
             }
         return None
+    
+    def abrir_prontuarios(self):
+        """Abre a tela de prontuários do médico"""
+        print("🎯 Abrindo prontuários do médico...")
+        self.main_controller.mostrar_prontuarios_medico()

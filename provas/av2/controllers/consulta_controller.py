@@ -95,7 +95,7 @@ class ConsultaController:
         """
         try:
             consultas = Consulta.buscar_por_medico(id_medico)
-            return True, "Consultas carregadas com sucesso", consultas
+            return True, "Consultas do médico carregadas com sucesso", consultas
         except Exception as e:
             error_msg = f"Erro ao buscar consultas do médico: {str(e)}"
             self.logger.error(error_msg)
@@ -376,5 +376,31 @@ class ConsultaController:
 
         except Exception as e:
             error_msg = f"Erro na validação dos dados: {str(e)}"
+            self.logger.error(error_msg)
+            return False, error_msg
+        
+    def salvar_prontuario(self, consulta_id, diagnostico, prescricao, observacoes_medicas):
+        """
+        Salva ou atualiza o prontuário de uma consulta
+        Retorna: (success, message)
+        """
+        try:
+            consulta = Consulta.buscar_por_id(consulta_id)
+            if not consulta:
+                return False, "Consulta não encontrada."
+            
+            # Atualizar campos do prontuário
+            consulta.diagnostico = diagnostico
+            consulta.prescricao = prescricao
+            consulta.observacoes_medicas = observacoes_medicas
+            
+            if consulta.salvar():
+                self.logger.info(f"Prontuário salvo para consulta ID {consulta_id}")
+                return True, "Prontuário salvo com sucesso!"
+            else:
+                return False, "Erro ao salvar prontuário no banco de dados."
+                
+        except Exception as e:
+            error_msg = f"Erro inesperado ao salvar prontuário: {str(e)}"
             self.logger.error(error_msg)
             return False, error_msg
