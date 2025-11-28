@@ -1,87 +1,120 @@
+# views/paciente/menu_view.py (atualizado)
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 class MenuPacienteView:
     def __init__(self, root, controller):
         self.root = root
         self.controller = controller
-        self.frame = ttk.Frame(root)
+        self.frame = tk.Frame(root, bg='#f0f0f0')
         
-        self._criar_widgets()
-    
+        # Inicialmente não criamos os widgets até saber qual paciente
+        self.paciente = None
+        
     def _criar_widgets(self):
-        # Cabeçalho
-        cabecalho_frame = tk.Frame(self.frame, bg='#f0f0f0')
-        cabecalho_frame.pack(fill="x", pady=(0, 30))
+        if not self.paciente:
+            return
+            
+        print(f"🛠️ Criando menu para: {self.paciente.nome}")
         
-        tk.Label(
-            cabecalho_frame,
-            text="MENU DO PACIENTE",
-            font=('Arial', 16, 'bold'),
-            fg='darkgreen',
+        # Limpar widgets existentes
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+        
+        # Configurar o frame principal
+        self.frame.configure(bg='#f0f0f0')
+        
+        # Título
+        titulo = tk.Label(
+            self.frame, 
+            text=f"BEM-VINDO, {self.paciente.nome.upper()}!",
+            font=('Arial', 18, 'bold'),
+            fg='#2E7D32',
             bg='#f0f0f0'
-        ).pack(side="left", padx=20, pady=15)
+        )
+        titulo.pack(pady=(50, 20))
         
-        tk.Button(
-            cabecalho_frame,
-            text="🚪 Sair",
-            font=('Arial', 9),
-            bg='#f44336',
-            fg='white',
-            command=self.sair
-        ).pack(side="right", padx=20, pady=10)
+        # Subtítulo
+        subtitulo = tk.Label(
+            self.frame,
+            text="Sistema de Agendamento de Consultas",
+            font=('Arial', 12),
+            fg='#555555',
+            bg='#f0f0f0'
+        )
+        subtitulo.pack(pady=(0, 40))
         
-        # Botões das funcionalidades
-        botoes_frame = tk.Frame(self.frame)
-        botoes_frame.pack(pady=20)
+        # Container central para os botões
+        container_central = tk.Frame(self.frame, bg='#f0f0f0')
+        container_central.pack(expand=True)
         
-        funcionalidades = [
-            ("📅 Agendar Consulta", self.agendar_consulta, "#4CAF50"),
-            ("🔄 Remarcar Consulta", self.remarcar_consulta, "#2196F3"),
-            ("❌ Cancelar Consulta", self.cancelar_consulta, "#f44336"),
-            ("📋 Histórico de Consultas", self.ver_historico, "#9C27B0"),
-            ("👤 Meu Perfil", self.ver_perfil, "#FF9800"),
-            ("📊 Minhas Estatísticas", self.ver_estatisticas, "#607D8B"),
+        # Botões do menu
+        botoes = [
+            ("📅 AGENDAR CONSULTA", self.agendar_consulta, '#4CAF50'),
+            ("📋 MINHAS CONSULTAS", self.minhas_consultas, '#2196F3'),
+            ("👤 MEUS DADOS", self.meus_dados, '#FF9800'),
+            ("📊 MEUS PRONTUÁRIOS", self.meus_prontuarios, '#9C27B0'),
+            ("🚪 SAIR", self.sair, '#f44336')
         ]
         
-        for i, (texto, comando, cor) in enumerate(funcionalidades):
+        for texto, comando, cor in botoes:
             btn = tk.Button(
-                botoes_frame,
+                container_central,
                 text=texto,
-                font=('Arial', 11),
+                font=('Arial', 12, 'bold'),
                 bg=cor,
                 fg='white',
                 width=25,
                 height=2,
-                relief='raised',
-                bd=2,
-                command=comando
+                command=comando,
+                relief='flat',
+                bd=0,
+                cursor='hand2'
             )
-            btn.grid(row=i//2, column=i%2, padx=15, pady=10)
+            btn.pack(pady=12, padx=50, fill='x')
+        
+        # Rodapé
+        rodape = tk.Label(
+            self.frame,
+            text=f"Paciente: {self.paciente.nome} | Email: {self.paciente.email}",
+            font=('Arial', 9),
+            fg='#777777',
+            bg='#f0f0f0'
+        )
+        rodape.pack(side='bottom', pady=20)
     
     def agendar_consulta(self):
-        self.controller.abrir_agendamento_consulta()
+        self.controller.mostrar_agendar_consulta()
+
+    def minhas_consultas(self):
+        self.controller.mostrar_minhas_consultas()
     
-    def remarcar_consulta(self):
-        self.controller.abrir_remarcacao_consulta()
+    def meus_dados(self):
+        messagebox.showinfo("Dados", "Funcionalidade de dados em desenvolvimento")
     
-    def cancelar_consulta(self):
-        self.controller.abrir_cancelamento_consulta()
-    
-    def ver_historico(self):
-        self.controller.abrir_historico_consultas()
-    
-    def ver_perfil(self):
-        self.controller.abrir_perfil_paciente()
-    
-    def ver_estatisticas(self):
-        self.controller.abrir_estatisticas_paciente()
+    def meus_prontuarios(self):
+        messagebox.showinfo("Prontuários", "Funcionalidade de prontuários em desenvolvimento")
     
     def sair(self):
         self.controller.voltar_principal()
     
     def mostrar(self):
-        self.frame.pack(fill="both", expand=True)
+        print("🖥️ Mostrando menu do paciente...")
+        
+        # Obter o paciente logado do controller
+        self.paciente = self.controller.usuario_logado
+        
+        if not self.paciente:
+            print("❌ Nenhum paciente logado")
+            messagebox.showerror("Erro", "Nenhum paciente logado")
+            return
+        
+        # Criar os widgets com o paciente atual
+        self._criar_widgets()
+        
+        # Mostrar o frame
+        self.frame.pack(fill="both", expand=True, padx=20, pady=20)
+        print("✅ Menu do paciente exibido")
     
     def ocultar(self):
         self.frame.pack_forget()

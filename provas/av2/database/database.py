@@ -1,19 +1,20 @@
 import sqlite3
 import os
+import hashlib
 
 class Database:
-    def __init__(self, db_name='agendamento_consultas.db'):
+    def __init__(self, db_name='sistema_agendamento.db'):
         self.db_name = db_name
         self.connection = None
         
     def connect(self):
-        """Conecta ao banco de dados SQLite3"""
+        """Conecta ao banco de dados SQLite"""
         try:
             self.connection = sqlite3.connect(self.db_name)
             self.connection.row_factory = sqlite3.Row
             return self.connection
         except sqlite3.Error as e:
-            print(f"❌ Erro ao conectar ao SQLite3: {e}")
+            print(f"Erro ao conectar ao banco de dados: {e}")
             return None
     
     def disconnect(self):
@@ -21,69 +22,56 @@ class Database:
         if self.connection:
             self.connection.close()
     
-    def execute_query(self, query, params=None):
-        """Executa uma query (INSERT, UPDATE, DELETE)"""
+    def executar_query(self, query, params=None, fetch_one=False, fetch_all=False, retornar_id=False):
+        """
+        Executa uma query no banco de dados
+        Retorna:
+            - Para SELECT: os resultados quando fetch_one ou fetch_all é True
+            - Para INSERT: o ID quando retornar_id é True
+            - Para outras queries: True em caso de sucesso, False em caso de erro
+        """
         conn = self.connect()
         if conn is None:
-            return False
+            return None if fetch_one or fetch_all else False
         
         try:
             cursor = conn.cursor()
+            
             if params:
                 cursor.execute(query, params)
             else:
                 cursor.execute(query)
-            conn.commit()
-            return True
+            
+            # Para operações que modificam o banco
+            if not query.strip().upper().startswith('SELECT'):
+                conn.commit()
+                
+                if retornar_id and query.strip().upper().startswith('INSERT'):
+                    return cursor.lastrowid
+                return True
+            
+            # Para operações SELECT
+            if fetch_one:
+                result = cursor.fetchone()
+                return dict(result) if result else None
+            elif fetch_all:
+                results = cursor.fetchall()
+                return [dict(row) for row in results]
+            else:
+                return True
+                
         except sqlite3.Error as e:
-            print(f"❌ Erro ao executar query: {e}")
-            return False
+            print(f"Erro ao executar query: {e}")
+            print(f"Query: {query}")
+            if params:
+                print(f"Parâmetros: {params}")
+            return None if fetch_one or fetch_all else False
         finally:
             self.disconnect()
     
-    def fetch_all(self, query, params=None):
-        """Executa uma query SELECT e retorna todos os resultados"""
-        conn = self.connect()
-        if conn is None:
-            return None
-        
-        try:
-            cursor = conn.cursor()
-            if params:
-                cursor.execute(query, params)
-            else:
-                cursor.execute(query)
-            results = cursor.fetchall()
-            return [dict(row) for row in results]
-        except sqlite3.Error as e:
-            print(f"❌ Erro ao executar query: {e}")
-            return None
-        finally:
-            self.disconnect()
-    
-    def fetch_one(self, query, params=None):
-        """Executa uma query SELECT e retorna um único resultado"""
-        conn = self.connect()
-        if conn is None:
-            return None
-        
-        try:
-            cursor = conn.cursor()
-            if params:
-                cursor.execute(query, params)
-            else:
-                cursor.execute(query)
-            result = cursor.fetchone()
-            return dict(result) if result else None
-        except sqlite3.Error as e:
-            print(f"❌ Erro ao executar query: {e}")
-            return None
-        finally:
-            self.disconnect()
-
-    def create_tables(self):
+    def criar_tabelas(self):
         """Cria todas as tabelas do sistema"""
-        tables = [
+        tabelas = [
             # Tabela de pacientes
             """
             CREATE TABLE IF NOT EXISTS pacientes (
@@ -112,15 +100,18 @@ class Database:
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """,
-            # Tabela de administradores (ATUALIZADA com coluna ativo)
+            # Tabela de administradores (atualizada para compatibilidade com o model)
             """
             CREATE TABLE IF NOT EXISTS administradores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                usuario TEXT UNIQUE NOT NULL,
-                senha TEXT NOT NULL,
                 nome TEXT NOT NULL,
-                ativo BOOLEAN DEFAULT 1,
-                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                email TEXT UNIQUE NOT NULL,
+                senha_hash TEXT NOT NULL,
+                telefone TEXT,
+                cargo TEXT DEFAULT 'Administrador',
+                nivel_acesso TEXT DEFAULT 'total',
+                data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'ativo'
             )
             """,
             # Tabela de agenda médica
@@ -134,7 +125,7 @@ class Database:
                 disponivel BOOLEAN DEFAULT 1,
                 motivo_bloqueio TEXT,
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (id_medico) REFERENCES medicos (id),
+                FOREIGN KEY (id_medico) REFERENCES medicos (id) ON DELETE CASCADE,
                 UNIQUE(id_medico, data_agenda, hora_inicio)
             )
             """,
@@ -150,11 +141,11 @@ class Database:
                 motivo TEXT,
                 observacoes TEXT,
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-                FOREIGN KEY (id_medico) REFERENCES medicos (id)
+                FOREIGN KEY (id_paciente) REFERENCES pacientes (id) ON DELETE CASCADE,
+                FOREIGN KEY (id_medico) REFERENCES medicos (id) ON DELETE CASCADE
             )
             """,
-            # NOVA TABELA: Prontuários
+            # Tabela de prontuários
             """
             CREATE TABLE IF NOT EXISTS prontuarios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,149 +157,287 @@ class Database:
                 exames TEXT,
                 observacoes TEXT,
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (id_paciente) REFERENCES pacientes (id),
-                FOREIGN KEY (id_medico) REFERENCES medicos (id),
-                FOREIGN KEY (id_consulta) REFERENCES consultas (id)
+                FOREIGN KEY (id_paciente) REFERENCES pacientes (id) ON DELETE CASCADE,
+                FOREIGN KEY (id_medico) REFERENCES medicos (id) ON DELETE CASCADE,
+                FOREIGN KEY (id_consulta) REFERENCES consultas (id) ON DELETE CASCADE,
+                UNIQUE(id_consulta)
             )
             """
         ]
         
-        for table_sql in tables:
-            if not self.execute_query(table_sql):
-                print(f"❌ Erro ao criar tabela")
+        for tabela_sql in tabelas:
+            sucesso = self.executar_query(tabela_sql)
+            if not sucesso:
+                print(f"Erro ao criar tabela")
                 return False
         
-        print("✅ Todas as tabelas criadas com sucesso!")
+        print("Todas as tabelas criadas com sucesso!")
         return True
     
-    def init_database(self):
-        """Inicializa o banco de dados com os usuários específicos"""
-        self.create_tables()
+    def _hash_senha(self, senha):
+        """Gera hash da senha (para administradores)"""
+        return hashlib.sha256(senha.encode()).hexdigest()
+    
+    def inicializar_dados_teste(self):
+        """Inicializa o banco de dados com dados de teste"""
+        # Criar tabelas
+        if not self.criar_tabelas():
+            return False
         
-        # ========== ADMINISTRADOR - JOÃO ==========
-        admin_existe = self.fetch_one("SELECT * FROM administradores WHERE usuario = 'joao'")
+        print("\n" + "="*70)
+        print("👥 USUÁRIOS DE TESTE CRIADOS")
+        print("="*70)
+        
+        # ========== ADMINISTRADOR ==========
+        admin_existe = self.executar_query(
+            "SELECT * FROM administradores WHERE email = ?", 
+            ('admin@hospital.com',), 
+            fetch_one=True
+        )
         if not admin_existe:
-            self.execute_query(
-                "INSERT INTO administradores (usuario, senha, nome) VALUES (?, ?, ?)",
-                ('joao', 'joao123', 'João Silva')
+            senha_hash = self._hash_senha('admin123')
+            admin_id = self.executar_query(
+                """INSERT INTO administradores (nome, email, senha_hash, telefone, cargo) 
+                VALUES (?, ?, ?, ?, ?)""",
+                ('Administrador Principal', 'admin@hospital.com', senha_hash, 
+                '(11) 99999-8888', 'Gerente Geral'),
+                retornar_id=True
             )
-            print("✅ Administrador 'João' criado - usuário: joao, senha: joao123")
+            print("👤 ADMINISTRADOR")
+            print(f"   Email: admin@hospital.com")
+            print(f"   Senha: admin123")
+            print(f"   Nome: Administrador Principal")
+        else:
+            print("👤 ADMINISTRADOR (já existente)")
+            print(f"   Email: admin@hospital.com")
+            print(f"   Senha: admin123")
+            print(f"   Nome: Administrador Principal")
         
-        # ========== MÉDICA - LETÍCIA ==========
-        medica_existe = self.fetch_one("SELECT * FROM medicos WHERE crm = 'CRM-SP-12345'")
-        if not medica_existe:
-            self.execute_query(
-                """INSERT INTO medicos (nome, crm, especialidade, telefone, email, senha) 
-                VALUES (?, ?, ?, ?, ?, ?)""",
-                ('Dra. Letícia de Paiva', 'CRM-SP-12345', 'Cardiologia', '(11) 98888-7777', 'leticia.paiva@hospital.com', 'leticia123')
+        # ========== MÉDICOS ==========
+        medicos = [
+            {
+                'nome': 'Dra. Letícia de Paiva',
+                'crm': 'CRM-SP-12345',
+                'especialidade': 'Cardiologia',
+                'telefone': '(11) 98888-7777',
+                'email': 'leticia.paiva@hospital.com',
+                'senha': 'leticia123'
+            },
+            {
+                'nome': 'Dr. Carlos Mendes',
+                'crm': 'CRM-SP-67890',
+                'especialidade': 'Dermatologia',
+                'telefone': '(11) 97777-6666',
+                'email': 'carlos.mendes@hospital.com',
+                'senha': 'carlos123'
+            }
+        ]
+        
+        print("\n👨‍⚕️ MÉDICOS")
+        for medico in medicos:
+            medico_existe = self.executar_query(
+                "SELECT * FROM medicos WHERE crm = ?", 
+                (medico['crm'],), 
+                fetch_one=True
             )
-            print("✅ Médica 'Letícia' criada - CRM: CRM-SP-12345, senha: leticia123")
-            
-            # Criar alguns horários na agenda da Dra. Letícia
-            medico_id = self.fetch_one("SELECT id FROM medicos WHERE crm = 'CRM-SP-12345'")['id']
-            
-            # Horários de exemplo para a próxima semana
-            horarios = [
-                ('2024-12-20', '08:00', '09:00'),
-                ('2024-12-20', '09:00', '10:00'),
-                ('2024-12-20', '10:00', '11:00'),
-                ('2024-12-20', '14:00', '15:00'),
-                ('2024-12-20', '15:00', '16:00'),
-                ('2024-12-21', '08:00', '09:00'),
-                ('2024-12-21', '09:00', '10:00'),
-            ]
-            
-            for data, inicio, fim in horarios:
-                self.execute_query(
-                    "INSERT INTO agenda_medica (id_medico, data_agenda, hora_inicio, hora_fim) VALUES (?, ?, ?, ?)",
-                    (medico_id, data, inicio, fim)
+            if not medico_existe:
+                medico_id = self.executar_query(
+                    """INSERT INTO medicos (nome, crm, especialidade, telefone, email, senha) 
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (medico['nome'], medico['crm'], medico['especialidade'], 
+                    medico['telefone'], medico['email'], medico['senha']),
+                    retornar_id=True
                 )
-            print("✅ Horários na agenda da Dra. Letícia criados")
+                print(f"   {medico['nome']}")
+                print(f"   CRM: {medico['crm']}")
+                print(f"   Email: {medico['email']}")
+                print(f"   Senha: {medico['senha']}")
+                print(f"   Especialidade: {medico['especialidade']}\n")
+            else:
+                print(f"   {medico['nome']} (já existente)")
+                print(f"   CRM: {medico['crm']}")
+                print(f"   Email: {medico['email']}")
+                print(f"   Senha: {medico['senha']}")
+                print(f"   Especialidade: {medico['especialidade']}\n")
         
-        # ========== PACIENTE - MARCOS ==========
-        paciente_existe = self.fetch_one("SELECT * FROM pacientes WHERE email = 'marcos.silva@email.com'")
-        if not paciente_existe:
-            self.execute_query(
-                """INSERT INTO pacientes (nome, email, telefone, data_nascimento, endereco, senha) 
-                VALUES (?, ?, ?, ?, ?, ?)""",
-                ('Marcos Ferreira', 'marcos.silva@email.com', '(11) 97777-6666', '15/08/1990', 
-                 'Rua das Flores, 123 - São Paulo, SP', 'marcos123')
+        # ========== PACIENTES ==========
+        pacientes = [
+            {
+                'nome': 'Marcos Ferreira',
+                'email': 'marcos.silva@email.com',
+                'telefone': '(11) 97777-6666',
+                'data_nascimento': '1990-08-15',
+                'endereco': 'Rua das Flores, 123 - São Paulo, SP',
+                'senha': 'marcos123'
+            },
+            {
+                'nome': 'Ana Santos',
+                'email': 'ana.santos@email.com',
+                'telefone': '(11) 96666-5555',
+                'data_nascimento': '1985-03-22',
+                'endereco': 'Av. Paulista, 1000 - São Paulo, SP',
+                'senha': 'ana123'
+            }
+        ]
+        
+        print("\n👥 PACIENTES")
+        for paciente in pacientes:
+            paciente_existe = self.executar_query(
+                "SELECT * FROM pacientes WHERE email = ?", 
+                (paciente['email'],), 
+                fetch_one=True
             )
-            print("✅ Paciente 'Marcos' criado - email: marcos.silva@email.com, senha: marcos123")
+            if not paciente_existe:
+                paciente_id = self.executar_query(
+                    """INSERT INTO pacientes (nome, email, telefone, data_nascimento, endereco, senha) 
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (paciente['nome'], paciente['email'], paciente['telefone'], 
+                    paciente['data_nascimento'], paciente['endereco'], paciente['senha']),
+                    retornar_id=True
+                )
+                print(f"   {paciente['nome']}")
+                print(f"   Email: {paciente['email']}")
+                print(f"   Senha: {paciente['senha']}")
+                print(f"   Telefone: {paciente['telefone']}\n")
+            else:
+                print(f"   {paciente['nome']} (já existente)")
+                print(f"   Email: {paciente['email']}")
+                print(f"   Senha: {paciente['senha']}")
+                print(f"   Telefone: {paciente['telefone']}\n")
         
         # ========== CONSULTA DE EXEMPLO ==========
-        # Criar uma consulta de exemplo entre Marcos e Dra. Letícia
-        consulta_existe = self.fetch_one("""
-            SELECT * FROM consultas 
-            WHERE id_paciente = (SELECT id FROM pacientes WHERE email = 'marcos.silva@email.com')
-            AND id_medico = (SELECT id FROM medicos WHERE crm = 'CRM-SP-12345')
-        """)
+        print("\n📅 CONSULTA DE EXEMPLO")
         
-        if not consulta_existe:
-            paciente_id = self.fetch_one("SELECT id FROM pacientes WHERE email = 'marcos.silva@email.com'")['id']
-            medico_id = self.fetch_one("SELECT id FROM medicos WHERE crm = 'CRM-SP-12345'")['id']
+        # Obter IDs do paciente e médico
+        paciente_result = self.executar_query(
+            "SELECT id, nome FROM pacientes WHERE email = ?", 
+            ('marcos.silva@email.com',), 
+            fetch_one=True
+        )
+        medico_result = self.executar_query(
+            "SELECT id, nome FROM medicos WHERE crm = ?", 
+            ('CRM-SP-12345',), 
+            fetch_one=True
+        )
+        
+        if paciente_result and medico_result:
+            paciente_id = paciente_result['id']
+            medico_id = medico_result['id']
             
-            self.execute_query(
-                """INSERT INTO consultas (id_paciente, id_medico, data_consulta, hora_consulta, status, motivo) 
-                VALUES (?, ?, ?, ?, ?, ?)""",
-                (paciente_id, medico_id, '2024-12-20', '09:00', 'agendada', 'Check-up cardiológico anual')
+            # Verificar se a consulta já existe
+            consulta_existe = self.executar_query(
+                """SELECT * FROM consultas 
+                WHERE id_paciente = ? AND id_medico = ? AND data_consulta = ? AND hora_consulta = ?""",
+                (paciente_id, medico_id, '2024-12-20', '09:00'),
+                fetch_one=True
             )
-            print("✅ Consulta de exemplo criada entre Marcos e Dra. Letícia")
+            
+            if not consulta_existe:
+                consulta_id = self.executar_query(
+                    """INSERT INTO consultas (id_paciente, id_medico, data_consulta, hora_consulta, status, motivo) 
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (paciente_id, medico_id, '2024-12-20', '09:00', 'agendada', 'Check-up cardiológico anual'),
+                    retornar_id=True
+                )
+            else:
+                consulta_id = consulta_existe['id']
+            
+            # Buscar a consulta criada para exibir os dados
+            consulta_criada = self.executar_query("""
+                SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome 
+                FROM consultas c
+                JOIN pacientes p ON c.id_paciente = p.id
+                JOIN medicos m ON c.id_medico = m.id
+                WHERE c.id = ?
+            """, (consulta_id,), fetch_one=True)
+            
+            if consulta_criada:
+                print(f"   Paciente: {consulta_criada['paciente_nome']}")
+                print(f"   Médico: {consulta_criada['medico_nome']}")
+                print(f"   Data: {consulta_criada['data_consulta']} {consulta_criada['hora_consulta']}")
+                print(f"   Status: {consulta_criada['status']}")
+                print(f"   Motivo: {consulta_criada['motivo']}")
         
         # ========== PRONTUÁRIO DE EXEMPLO ==========
-        # Criar um prontuário de exemplo para a consulta entre Marcos e Dra. Letícia
-        prontuario_existe = self.fetch_one("""
-            SELECT * FROM prontuarios 
-            WHERE id_consulta = (
-                SELECT id FROM consultas 
-                WHERE id_paciente = (SELECT id FROM pacientes WHERE email = 'marcos.silva@email.com')
-                AND id_medico = (SELECT id FROM medicos WHERE crm = 'CRM-SP-12345')
-            )
-        """)
-
-        if not prontuario_existe:
-            consulta_id = self.fetch_one("""
-                SELECT id FROM consultas 
-                WHERE id_paciente = (SELECT id FROM pacientes WHERE email = 'marcos.silva@email.com')
-                AND id_medico = (SELECT id FROM medicos WHERE crm = 'CRM-SP-12345')
-            """)['id']
-            
-            paciente_id = self.fetch_one("SELECT id FROM pacientes WHERE email = 'marcos.silva@email.com'")['id']
-            medico_id = self.fetch_one("SELECT id FROM medicos WHERE crm = 'CRM-SP-12345'")['id']
-            
-            self.execute_query(
-                """INSERT INTO prontuarios (id_paciente, id_medico, id_consulta, diagnostico, prescricao, exames, observacoes) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (paciente_id, medico_id, consulta_id, 
-                 'Paciente com histórico familiar de cardiopatia. Pressão arterial dentro dos limites normais.',
-                 'Manter hábitos saudáveis de alimentação e prática regular de exercícios físicos.',
-                 'Eletrocardiograma - Normal\nHemograma completo - Dentro dos parâmetros',
-                 'Paciente orientado sobre importância do acompanhamento anual.')
-            )
-            print("✅ Prontuário de exemplo criado para a consulta entre Marcos e Dra. Letícia")
+        print("\n📋 PRONTUÁRIO DE EXEMPLO")
         
-        print("\n" + "="*50)
-        print("👤 USUÁRIOS CRIADOS PARA TESTE:")
-        print("="*50)
-        print("Administrador:")
-        print("  Usuário: joao")
-        print("  Senha: joao123")
-        print("  Nome: João Silva")
-        print("\nMédica:")
-        print("  CRM: CRM-SP-12345")
-        print("  Senha: leticia123")
-        print("  Nome: Dra. Letícia de Paiva")
-        print("  Especialidade: Cardiologia")
-        print("\nPaciente:")
-        print("  E-mail: marcos.silva@email.com")
-        print("  Senha: marcos123")
-        print("  Nome: Marcos Ferreira")
-        print("="*50)
+        if 'consulta_id' in locals() and consulta_id:
+            prontuario_existe = self.executar_query(
+                "SELECT * FROM prontuarios WHERE id_consulta = ?", 
+                (consulta_id,), 
+                fetch_one=True
+            )
+            
+            if not prontuario_existe:
+                prontuario_id = self.executar_query(
+                    """INSERT INTO prontuarios (id_paciente, id_medico, id_consulta, diagnostico, prescricao, exames, observacoes) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (paciente_id, medico_id, consulta_id, 
+                    'Paciente com histórico familiar de cardiopatia. Pressão arterial dentro dos limites normais.',
+                    'Manter hábitos saudáveis de alimentação e prática regular de exercícios físicos.',
+                    'Eletrocardiograma - Normal\nHemograma completo - Dentro dos parâmetros',
+                    'Paciente orientado sobre importância do acompanhamento anual.'),
+                    retornar_id=True
+                )
+                
+                print(f"   Prontuário criado para: Marcos Ferreira")
+                print(f"   Diagnóstico: Paciente com histórico familiar de cardiopatia")
+                print(f"   Prescrição: Manter hábitos saudáveis")
+            else:
+                print(f"   Prontuário já existente para: Marcos Ferreira")
+                print(f"   Diagnóstico: {prontuario_existe['diagnostico']}")
+                print(f"   Prescrição: {prontuario_existe['prescricao']}")
+        
+        print("\n" + "="*70)
+        print("✅ DADOS DE TESTE INICIALIZADOS COM SUCESSO!")
+        print("="*70)
+        
+        return True
 
-    def get_usuarios_teste(self):
-        """Retorna os dados dos usuários de teste para facilitar o login"""
+    # MÉTODO DE COMPATIBILIDADE - ADICIONADO PARA RESOLVER O ERRO
+    def init_database(self):
+        """Método de compatibilidade - chama inicializar_dados_teste()"""
+        return self.inicializar_dados_teste()
+    
+    def obter_dados_login_teste(self):
+        """Retorna os dados para login de teste de forma organizada"""
         return {
-            'administrador': {'usuario': 'joao', 'senha': 'joao123'},
-            'medico': {'crm': 'CRM-SP-12345', 'senha': 'leticia123'},
-            'paciente': {'email': 'marcos.silva@email.com', 'senha': 'marcos123'}
+            'administrador': {
+                'tipo': 'Administrador',
+                'email': 'admin@hospital.com', 
+                'senha': 'admin123',
+                'nome': 'Administrador Principal'
+            },
+            'medicos': [
+                {
+                    'tipo': 'Médico',
+                    'crm': 'CRM-SP-12345',
+                    'email': 'leticia.paiva@hospital.com', 
+                    'senha': 'leticia123',
+                    'nome': 'Dra. Letícia de Paiva',
+                    'especialidade': 'Cardiologia'
+                },
+                {
+                    'tipo': 'Médico', 
+                    'crm': 'CRM-SP-67890',
+                    'email': 'carlos.mendes@hospital.com', 
+                    'senha': 'carlos123',
+                    'nome': 'Dr. Carlos Mendes',
+                    'especialidade': 'Dermatologia'
+                }
+            ],
+            'pacientes': [
+                {
+                    'tipo': 'Paciente',
+                    'email': 'marcos.silva@email.com', 
+                    'senha': 'marcos123',
+                    'nome': 'Marcos Ferreira'
+                },
+                {
+                    'tipo': 'Paciente',
+                    'email': 'ana.santos@email.com', 
+                    'senha': 'ana123',
+                    'nome': 'Ana Santos'
+                }
+            ]
         }

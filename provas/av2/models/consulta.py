@@ -9,42 +9,52 @@ class Consulta:
         self.id_medico = id_medico
         self.data_consulta = data_consulta
         self.hora_consulta = hora_consulta
-        self.status = status  # 'agendada', 'confirmada', 'realizada', 'cancelada', 'remarcada'
+        self.status = status
         self.motivo = motivo
         self.observacoes = observacoes
         self.data_criacao = data_criacao
-        # Campos para join (não existem na tabela, mas são úteis para exibição)
+        # Campos para join
         self.paciente_nome = paciente_nome
         self.medico_nome = medico_nome
         self.especialidade = especialidade
     
     def salvar(self):
-        """Salva ou atualiza uma consulta (CREATE/UPDATE)"""
-        db = Database()
+        """Salva ou atualiza a consulta"""
         if self.id is None:
-            # Nova consulta
-            query = """
-            INSERT INTO consultas (id_paciente, id_medico, data_consulta, hora_consulta, status, motivo, observacoes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """
-            params = (self.id_paciente, self.id_medico, self.data_consulta, 
-                     self.hora_consulta, self.status, self.motivo, self.observacoes)
-            return db.execute_query(query, params)
+            return self._criar()
         else:
-            # Atualizar consulta existente
-            query = """
-            UPDATE consultas 
-            SET id_paciente=?, id_medico=?, data_consulta=?, hora_consulta=?, status=?, motivo=?, observacoes=?
-            WHERE id=?
-            """
-            params = (self.id_paciente, self.id_medico, self.data_consulta, 
-                     self.hora_consulta, self.status, self.motivo, self.observacoes, self.id)
-            return db.execute_query(query, params)
+            return self._atualizar()
     
-    @staticmethod
-    def buscar_por_id(id):
-        """Busca uma consulta por ID (READ)"""
+    def _criar(self):
+        """Cria uma nova consulta"""
+        query = """
+        INSERT INTO consultas (id_paciente, id_medico, data_consulta, hora_consulta, status, motivo, observacoes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+        params = (self.id_paciente, self.id_medico, self.data_consulta, 
+                 self.hora_consulta, self.status, self.motivo, self.observacoes)
+        
         db = Database()
+        self.id = db.executar_query(query, params, retornar_id=True)
+        return self.id
+    
+    def _atualizar(self):
+        """Atualiza uma consulta existente"""
+        query = """
+        UPDATE consultas 
+        SET id_paciente=?, id_medico=?, data_consulta=?, hora_consulta=?, status=?, motivo=?, observacoes=?
+        WHERE id=?
+        """
+        params = (self.id_paciente, self.id_medico, self.data_consulta, 
+                 self.hora_consulta, self.status, self.motivo, self.observacoes, self.id)
+        
+        db = Database()
+        db.executar_query(query, params)
+        return True
+    
+    @classmethod
+    def buscar_por_id(cls, id):
+        """Busca uma consulta por ID"""
         query = """
         SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
         FROM consultas c
@@ -52,15 +62,16 @@ class Consulta:
         LEFT JOIN medicos m ON c.id_medico = m.id
         WHERE c.id = ?
         """
-        result = db.fetch_one(query, (id,))
+        db = Database()
+        result = db.executar_query(query, (id,), fetch_one=True)
+        
         if result:
-            return Consulta(**result)
+            return cls(**result)
         return None
     
-    @staticmethod
-    def buscar_por_paciente(id_paciente):
+    @classmethod
+    def buscar_por_paciente(cls, id_paciente):
         """Busca todas as consultas de um paciente"""
-        db = Database()
         query = """
         SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
         FROM consultas c
@@ -69,16 +80,17 @@ class Consulta:
         WHERE c.id_paciente = ?
         ORDER BY c.data_consulta DESC, c.hora_consulta DESC
         """
-        results = db.fetch_all(query, (id_paciente,))
+        db = Database()
+        results = db.executar_query(query, (id_paciente,), fetch_all=True)
+        
         consultas = []
         for result in results:
-            consultas.append(Consulta(**result))
+            consultas.append(cls(**result))
         return consultas
     
-    @staticmethod
-    def buscar_por_medico(id_medico):
+    @classmethod
+    def buscar_por_medico(cls, id_medico):
         """Busca todas as consultas de um médico"""
-        db = Database()
         query = """
         SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
         FROM consultas c
@@ -87,16 +99,17 @@ class Consulta:
         WHERE c.id_medico = ?
         ORDER BY c.data_consulta, c.hora_consulta
         """
-        results = db.fetch_all(query, (id_medico,))
+        db = Database()
+        results = db.executar_query(query, (id_medico,), fetch_all=True)
+        
         consultas = []
         for result in results:
-            consultas.append(Consulta(**result))
+            consultas.append(cls(**result))
         return consultas
     
-    @staticmethod
-    def buscar_por_medico_e_data(id_medico, data_consulta):
+    @classmethod
+    def buscar_por_medico_e_data(cls, id_medico, data_consulta):
         """Busca consultas de um médico em uma data específica"""
-        db = Database()
         query = """
         SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
         FROM consultas c
@@ -105,16 +118,36 @@ class Consulta:
         WHERE c.id_medico = ? AND c.data_consulta = ?
         ORDER BY c.hora_consulta
         """
-        results = db.fetch_all(query, (id_medico, data_consulta))
+        db = Database()
+        results = db.executar_query(query, (id_medico, data_consulta), fetch_all=True)
+        
         consultas = []
         for result in results:
-            consultas.append(Consulta(**result))
+            consultas.append(cls(**result))
         return consultas
     
-    @staticmethod
-    def buscar_proximas_por_paciente(id_paciente, limite=10):
-        """Busca as próximas consultas de um paciente"""
+    @classmethod
+    def buscar_por_status(cls, status):
+        """Busca consultas por status"""
+        query = """
+        SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
+        FROM consultas c
+        LEFT JOIN pacientes p ON c.id_paciente = p.id
+        LEFT JOIN medicos m ON c.id_medico = m.id
+        WHERE c.status = ?
+        ORDER BY c.data_consulta, c.hora_consulta
+        """
         db = Database()
+        results = db.executar_query(query, (status,), fetch_all=True)
+        
+        consultas = []
+        for result in results:
+            consultas.append(cls(**result))
+        return consultas
+    
+    @classmethod
+    def buscar_proximas_por_paciente(cls, id_paciente, limite=10):
+        """Busca as próximas consultas de um paciente"""
         query = """
         SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
         FROM consultas c
@@ -125,16 +158,17 @@ class Consulta:
         ORDER BY c.data_consulta, c.hora_consulta
         LIMIT ?
         """
-        results = db.fetch_all(query, (id_paciente, limite))
+        db = Database()
+        results = db.executar_query(query, (id_paciente, limite), fetch_all=True)
+        
         consultas = []
         for result in results:
-            consultas.append(Consulta(**result))
+            consultas.append(cls(**result))
         return consultas
     
-    @staticmethod
-    def listar_todas():
-        """Lista todas as consultas (READ)"""
-        db = Database()
+    @classmethod
+    def buscar_todas(cls):
+        """Busca todas as consultas"""
         query = """
         SELECT c.*, p.nome as paciente_nome, m.nome as medico_nome, m.especialidade
         FROM consultas c
@@ -142,50 +176,57 @@ class Consulta:
         LEFT JOIN medicos m ON c.id_medico = m.id
         ORDER BY c.data_consulta DESC, c.hora_consulta DESC
         """
-        results = db.fetch_all(query)
+        db = Database()
+        results = db.executar_query(query, fetch_all=True)
+        
         consultas = []
         for result in results:
-            consultas.append(Consulta(**result))
+            consultas.append(cls(**result))
         return consultas
+    
+    def atualizar_status(self, novo_status, observacoes=None):
+        """Atualiza o status da consulta"""
+        self.status = novo_status
+        if observacoes:
+            self.observacoes = f"{self.observacoes or ''}\n{observacoes}"
+        return self.salvar()
     
     def confirmar(self):
         """Confirma uma consulta"""
-        self.status = 'confirmada'
-        return self.salvar()
+        return self.atualizar_status('confirmada')
     
-    def cancelar(self, motivo="Cancelado pelo paciente"):
+    def cancelar(self, motivo="Cancelada"):
         """Cancela uma consulta"""
-        self.status = 'cancelada'
-        self.observacoes = f"{self.observacoes or ''}\nCancelamento: {motivo}"
-        return self.salvar()
+        return self.atualizar_status('cancelada', f"Cancelamento: {motivo}")
+    
+    def finalizar(self, observacoes_medicas=None):
+        """Finaliza uma consulta"""
+        observacoes = f"Finalizada: {observacoes_medicas}" if observacoes_medicas else "Consulta finalizada"
+        return self.atualizar_status('realizada', observacoes)
     
     def remarcar(self, nova_data, nova_hora):
         """Remarca uma consulta"""
         self.data_consulta = nova_data
         self.hora_consulta = nova_hora
-        self.status = 'remarcada'
-        self.observacoes = f"{self.observacoes or ''}\nRemarcada para: {nova_data} {nova_hora}"
-        return self.salvar()
+        return self.atualizar_status('remarcada', f"Remarcada para: {nova_data} {nova_hora}")
     
-    def finalizar(self, observacoes_medicas):
-        """Finaliza uma consulta (marcar como realizada)"""
-        self.status = 'realizada'
-        self.observacoes = f"{self.observacoes or ''}\nFinalizada: {observacoes_medicas}"
-        return self.salvar()
-    
-    def verificar_disponibilidade(self):
-        """Verifica se o horário da consulta está disponível"""
-        from .agenda import Agenda
+    @classmethod
+    def verificar_conflito_horario(cls, id_medico, data_consulta, hora_consulta, exclude_id=None):
+        """Verifica se há conflito de horário para o médico"""
+        query = """
+        SELECT COUNT(*) as count FROM consultas 
+        WHERE id_medico = ? AND data_consulta = ? AND hora_consulta = ? 
+        AND status IN ('agendada', 'confirmada')
+        """
+        params = (id_medico, data_consulta, hora_consulta)
         
-        horarios_disponiveis = Agenda.buscar_disponiveis_por_medico_e_data(
-            self.id_medico, self.data_consulta
-        )
+        if exclude_id:
+            query += " AND id != ?"
+            params = params + (exclude_id,)
         
-        for horario in horarios_disponiveis:
-            if (horario.hora_inicio <= self.hora_consulta < horario.hora_fim and 
-                horario.disponivel):
-                return True
-        return False
+        db = Database()
+        result = db.executar_query(query, params, fetch_one=True)
+        return result['count'] > 0 if result else False
     
     def to_dict(self):
         """Converte o objeto para dicionário"""

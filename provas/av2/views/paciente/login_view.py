@@ -67,15 +67,49 @@ class LoginPacienteView:
         ).grid(row=0, column=2, padx=10)
     
     def fazer_login(self):
-        email = self.entry_email.get()
-        senha = self.entry_senha.get()
-        self.controller.fazer_login_paciente(email, senha)
+        email = self.entry_email.get().strip()
+        senha = self.entry_senha.get().strip()
+        
+        # Validação básica
+        if not email or not senha:
+            messagebox.showerror("Erro", "Por favor, preencha todos os campos")
+            return
+        
+        # DEBUG: Mostrar o que está sendo enviado
+        print(f"Tentando login - Email: {email}, Senha: {senha}")
+        
+        # Chamar o controller - com tratamento de erro caso o método não exista
+        try:
+            if hasattr(self.controller, 'fazer_login_paciente'):
+                self.controller.fazer_login_paciente(email, senha)
+            else:
+                messagebox.showerror("Erro", "Método de login não disponível")
+                print("ERRO: Controller não tem método 'fazer_login_paciente'")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro durante o login: {str(e)}")
+            print(f"ERRO EXCEÇÃO: {e}")
     
     def cadastrar(self):
-        self.controller.abrir_cadastro_paciente()
+        try:
+            if hasattr(self.controller, 'abrir_cadastro_paciente'):
+                self.controller.abrir_cadastro_paciente()
+            else:
+                messagebox.showerror("Erro", "Funcionalidade de cadastro não disponível")
+                print("ERRO: Controller não tem método 'abrir_cadastro_paciente'")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao abrir cadastro: {str(e)}")
     
     def voltar(self):
-        self.controller.voltar_principal()
+        try:
+            if hasattr(self.controller, 'voltar_principal'):
+                self.controller.voltar_principal()
+            else:
+                # Fallback: tentar voltar de outra forma
+                self.frame.pack_forget()
+                from views.main_view import MainView
+                MainView(self.root)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao voltar: {str(e)}")
     
     def mostrar(self):
         self.frame.pack(fill="both", expand=True)

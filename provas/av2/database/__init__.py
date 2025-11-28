@@ -1,1 +1,4 @@
-# Este arquivo torna o diretório 'database' em um pacote Python
+# database/__init__.py
+from .database import Database
+
+__all__ = ['Database']

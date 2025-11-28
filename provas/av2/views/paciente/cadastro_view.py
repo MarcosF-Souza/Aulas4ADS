@@ -83,7 +83,7 @@ class CadastroPacienteView:
         self.controller.cadastrar_paciente(dados)
     
     def voltar(self):
-        self.controller.voltar_login_paciente()
+        self.controller.mostrar_login_paciente()
     
     def mostrar(self):
         self.frame.pack(fill="both", expand=True)

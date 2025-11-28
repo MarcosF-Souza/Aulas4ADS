@@ -12,103 +12,145 @@ class Agenda:
         self.motivo_bloqueio = motivo_bloqueio
     
     def salvar(self):
-        """Salva ou atualiza um horário na agenda (CREATE/UPDATE)"""
-        db = Database()
+        """Salva ou atualiza o horário na agenda"""
         if self.id is None:
-            # Inserir novo horário
-            query = """
-            INSERT INTO agenda_medica (id_medico, data_agenda, hora_inicio, hora_fim, disponivel, motivo_bloqueio)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """
-            params = (self.id_medico, self.data_agenda, self.hora_inicio, 
-                     self.hora_fim, self.disponivel, self.motivo_bloqueio)
-            return db.execute_query(query, params)
+            return self._criar()
         else:
-            # Atualizar horário existente
-            query = """
-            UPDATE agenda_medica 
-            SET id_medico=?, data_agenda=?, hora_inicio=?, hora_fim=?, disponivel=?, motivo_bloqueio=?
-            WHERE id=?
-            """
-            params = (self.id_medico, self.data_agenda, self.hora_inicio, 
-                     self.hora_fim, self.disponivel, self.motivo_bloqueio, self.id)
-            return db.execute_query(query, params)
+            return self._atualizar()
     
-    @staticmethod
-    def buscar_por_id(id):
-        """Busca um horário na agenda por ID (READ)"""
+    def _criar(self):
+        """Cria um novo horário na agenda"""
+        query = """
+        INSERT INTO agenda_medica (id_medico, data_agenda, hora_inicio, hora_fim, disponivel, motivo_bloqueio)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """
+        params = (self.id_medico, self.data_agenda, self.hora_inicio, 
+                 self.hora_fim, self.disponivel, self.motivo_bloqueio)
+        
         db = Database()
+        self.id = db.executar_query(query, params, retornar_id=True)
+        return self.id
+    
+    def _atualizar(self):
+        """Atualiza um horário existente na agenda"""
+        query = """
+        UPDATE agenda_medica 
+        SET id_medico=?, data_agenda=?, hora_inicio=?, hora_fim=?, disponivel=?, motivo_bloqueio=?
+        WHERE id=?
+        """
+        params = (self.id_medico, self.data_agenda, self.hora_inicio, 
+                 self.hora_fim, self.disponivel, self.motivo_bloqueio, self.id)
+        
+        db = Database()
+        db.executar_query(query, params)
+        return True
+    
+    @classmethod
+    def buscar_por_id(cls, id):
+        """Busca um horário na agenda por ID"""
         query = "SELECT * FROM agenda_medica WHERE id = ?"
-        result = db.fetch_one(query, (id,))
+        db = Database()
+        result = db.executar_query(query, (id,), fetch_one=True)
+        
         if result:
-            return Agenda(**result)
+            return cls(**result)
         return None
     
-    @staticmethod
-    def buscar_por_medico_e_data(id_medico, data_agenda):
+    @classmethod
+    def buscar_por_medico_e_data(cls, id_medico, data_agenda):
         """Busca horários de um médico em uma data específica"""
-        db = Database()
         query = """
         SELECT * FROM agenda_medica 
         WHERE id_medico = ? AND data_agenda = ? 
         ORDER BY hora_inicio
         """
-        results = db.fetch_all(query, (id_medico, data_agenda))
+        db = Database()
+        results = db.executar_query(query, (id_medico, data_agenda), fetch_all=True)
+        
         agendas = []
         for result in results:
-            agendas.append(Agenda(**result))
+            agendas.append(cls(**result))
         return agendas
     
-    @staticmethod
-    def buscar_disponiveis_por_medico_e_data(id_medico, data_agenda):
+    @classmethod
+    def buscar_disponiveis_por_medico_e_data(cls, id_medico, data_agenda):
         """Busca horários disponíveis de um médico em uma data específica"""
-        db = Database()
         query = """
         SELECT * FROM agenda_medica 
         WHERE id_medico = ? AND data_agenda = ? AND disponivel = 1
         ORDER BY hora_inicio
         """
-        results = db.fetch_all(query, (id_medico, data_agenda))
+        db = Database()
+        results = db.executar_query(query, (id_medico, data_agenda), fetch_all=True)
+        
         agendas = []
         for result in results:
-            agendas.append(Agenda(**result))
+            agendas.append(cls(**result))
         return agendas
     
-    @staticmethod
-    def listar_por_medico(id_medico):
-        """Lista todos os horários de um médico"""
-        db = Database()
+    @classmethod
+    def buscar_por_medico(cls, id_medico):
+        """Busca todos os horários de um médico"""
         query = """
         SELECT * FROM agenda_medica 
         WHERE id_medico = ? 
         ORDER BY data_agenda DESC, hora_inicio
         """
-        results = db.fetch_all(query, (id_medico,))
+        db = Database()
+        results = db.executar_query(query, (id_medico,), fetch_all=True)
+        
         agendas = []
         for result in results:
-            agendas.append(Agenda(**result))
+            agendas.append(cls(**result))
         return agendas
     
-    def bloquear_horario(self, motivo="Bloqueado pelo médico"):
+    def bloquear(self, motivo="Bloqueado pelo médico"):
         """Bloqueia um horário na agenda"""
-        db = Database()
-        query = "UPDATE agenda_medica SET disponivel = 0, motivo_bloqueio = ? WHERE id = ?"
-        return db.execute_query(query, (motivo, self.id))
+        self.disponivel = False
+        self.motivo_bloqueio = motivo
+        return self.salvar()
     
-    def liberar_horario(self):
+    def liberar(self):
         """Libera um horário bloqueado na agenda"""
-        db = Database()
-        query = "UPDATE agenda_medica SET disponivel = 1, motivo_bloqueio = NULL WHERE id = ?"
-        return db.execute_query(query, (self.id,))
+        self.disponivel = True
+        self.motivo_bloqueio = None
+        return self.salvar()
     
     def excluir(self):
-        """Exclui um horário da agenda (DELETE)"""
-        db = Database()
+        """Exclui um horário da agenda"""
         query = "DELETE FROM agenda_medica WHERE id = ?"
-        return db.execute_query(query, (self.id,))
+        db = Database()
+        db.executar_query(query, (self.id,))
+        return True
     
-    @staticmethod
-    def criar_horarios_padrao(id_medico, data_agenda):
+    @classmethod
+    def verificar_disponibilidade(cls, id_medico, data_agenda, hora_inicio, hora_fim=None, exclude_id=None):
+        """Verifica se um horário está disponível para agendamento"""
+        if hora_fim:
+            query = """
+            SELECT COUNT(*) as count FROM agenda_medica 
+            WHERE id_medico = ? AND data_agenda = ? 
+            AND hora_inicio = ? AND hora_fim = ? AND disponivel = 1
+            """
+            params = (id_medico, data_agenda, hora_inicio, hora_fim)
+        else:
+            query = """
+            SELECT COUNT(*) as count FROM agenda_medica 
+            WHERE id_medico = ? AND data_agenda = ? 
+            AND hora_inicio = ? AND disponivel = 1
+            """
+            params = (id_medico, data_agenda, hora_inicio)
+        
+        if exclude_id:
+            query += " AND id != ?"
+            params = params + (exclude_id,)
+        
+        db = Database()
+        result = db.executar_query(query, params, fetch_one=True)
+        return result['count'] > 0 if result else False
+    
+    @classmethod
+    def criar_horarios_padrao(cls, id_medico, data_agenda):
         """Cria horários padrão para um médico em uma data específica"""
         horarios_padrao = [
             ('08:00', '09:00'),
@@ -121,14 +163,16 @@ class Agenda:
         ]
         
         for hora_inicio, hora_fim in horarios_padrao:
-            agenda = Agenda(
-                id_medico=id_medico,
-                data_agenda=data_agenda,
-                hora_inicio=hora_inicio,
-                hora_fim=hora_fim,
-                disponivel=True
-            )
-            agenda.salvar()
+            # Verifica se o horário já existe antes de criar
+            if not cls.verificar_disponibilidade(id_medico, data_agenda, hora_inicio, hora_fim):
+                agenda = cls(
+                    id_medico=id_medico,
+                    data_agenda=data_agenda,
+                    hora_inicio=hora_inicio,
+                    hora_fim=hora_fim,
+                    disponivel=True
+                )
+                agenda.salvar()
     
     def to_dict(self):
         """Converte o objeto para dicionário"""

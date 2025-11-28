@@ -1,9 +1,12 @@
+# main.py
 import tkinter as tk
 from tkinter import ttk
 from views.main_view import MainView
 from views.paciente.login_view import LoginPacienteView
 from views.paciente.cadastro_view import CadastroPacienteView
 from views.paciente.menu_view import MenuPacienteView
+from views.paciente.agendar_consulta_view import AgendarConsultaView
+from views.paciente.minhas_consultas_view import MinhasConsultasView
 from views.medico.login_view import LoginMedicoView
 from views.medico.menu_view import MenuMedicoView
 from views.admin.login_view import LoginAdminView
@@ -48,29 +51,60 @@ class Application:
     
     def _inicializar_views(self):
         """Inicializa todas as views do sistema"""
+        print("🔄 Inicializando views...")
+        
+        # View principal
         self.views["MainView"] = MainView(self.root, self.controller)
+        print("✅ MainView inicializada")
         
         # Views do paciente
         self.views["LoginPaciente"] = LoginPacienteView(self.root, self.controller)
         self.views["CadastroPaciente"] = CadastroPacienteView(self.root, self.controller)
         self.views["MenuPaciente"] = MenuPacienteView(self.root, self.controller)
+        self.views["AgendarConsulta"] = AgendarConsultaView(self.root, self.controller)
+        self.views["MinhasConsultas"] = MinhasConsultasView(self.root, self.controller)
+        print("✅ Views do paciente inicializadas")
         
         # Views do médico
         self.views["LoginMedico"] = LoginMedicoView(self.root, self.controller)
         self.views["MenuMedico"] = MenuMedicoView(self.root, self.controller)
+        print("✅ Views do médico inicializadas")
         
         # Views do administrador
         self.views["LoginAdmin"] = LoginAdminView(self.root, self.controller)
         self.views["MenuAdmin"] = MenuAdminView(self.root, self.controller)
+        print("✅ Views do admin inicializadas")
+        
+        print("🎉 Todas as views foram inicializadas com sucesso!")
     
     def mostrar_view(self, nome_view):
         """Mostra a view especificada e oculta as outras"""
+        print(f"🔄 Navegando para: {nome_view}")
+        
+        # Verificar se a view existe
+        if nome_view not in self.views:
+            print(f"❌ View não encontrada: {nome_view}")
+            return
+        
+        # Ocultar todas as views
         for nome, view in self.views.items():
-            if nome == nome_view:
-                view.mostrar()
+            if hasattr(view, 'ocultar'):
+                view.ocultar()
             else:
-                if hasattr(view, 'ocultar'):
-                    view.ocultar()
+                # Fallback: se não tem método ocultar, esconde o frame
+                if hasattr(view, 'frame'):
+                    view.frame.pack_forget()
+        
+        # Mostrar a view solicitada
+        view = self.views[nome_view]
+        if hasattr(view, 'mostrar'):
+            view.mostrar()
+        else:
+            # Fallback: se não tem método mostrar, mostra o frame
+            if hasattr(view, 'frame'):
+                view.frame.pack(fill="both", expand=True)
+        
+        print(f"✅ View {nome_view} mostrada com sucesso")
     
     def run(self):
         self.root.mainloop()
