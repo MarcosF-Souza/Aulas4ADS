@@ -204,6 +204,8 @@ class MainController:
         
         if sucesso:
             print(f"✅ Login bem-sucedido: Dr. {medico.nome}")
+            # Garantir que o usuário logado está definido
+            self.usuario_logado = medico
             # Atualizar o título da janela
             self.app.root.title(f"Sistema de Agendamento - Médico: Dr. {medico.nome}")
             # Navegar para o menu do médico
@@ -212,6 +214,17 @@ class MainController:
             print(f"❌ Falha no login: {mensagem}")
             from tkinter import messagebox
             messagebox.showerror("Erro", mensagem)
+
+    def verificar_medico_logado(self):
+        """Verifica se há um médico logado"""
+        if not self.usuario_logado:
+            return False
+        
+        # Verificar se o usuário logado é realmente um médico
+        if hasattr(self.usuario_logado, 'crm'):
+            return True
+        
+        return False
 
     def fazer_login_admin(self, email, senha):
         """Método usado pela view de login do administrador"""
@@ -402,3 +415,15 @@ class MainController:
         """Mostra a tela de meus dados"""
         print("🎯 Navegando para MeusDados")
         self.app.mostrar_view("MeusDados")
+        
+    def abrir_minha_agenda(self):
+        """Abre a tela Minha Agenda do médico"""
+        print("🎯 Navegando para MinhaAgenda")
+        self.app.mostrar_view("MinhaAgenda")
+
+    def abrir_prescricoes(self):
+        """Abre a tela de prescrições do médico"""
+        print("🎯 Navegando para tela de prescrições (em desenvolvimento)")
+        # Por enquanto, vamos mostrar uma mensagem
+        from tkinter import messagebox
+        messagebox.showinfo("Em desenvolvimento", "Funcionalidade de prescrições em desenvolvimento")

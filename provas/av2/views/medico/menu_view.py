@@ -34,7 +34,7 @@ class MenuMedicoView:
         botoes_frame.pack(pady=20)
         
         funcionalidades = [
-            ("📅 Minha Agenda", self.ver_agenda, "#2196F3"),
+            ("📅 Minha Agenda", self.ver_minha_agenda, "#2196F3"),  # Alterado para ver_minha_agenda
             ("👥 Consultas do Dia", self.ver_consultas_dia, "#4CAF50"),
             ("📋 Prontuários", self.ver_prontuarios, "#9C27B0"),
             ("⚙️ Gerenciar Agenda", self.gerenciar_agenda, "#FF9800"),
@@ -57,11 +57,11 @@ class MenuMedicoView:
             )
             btn.grid(row=i//2, column=i%2, padx=15, pady=10)
     
-    def ver_agenda(self):
-        self.controller.abrir_agenda_medico()
+    def ver_minha_agenda(self):  # Método atualizado
+        self.controller.abrir_minha_agenda()  # Chamada corrigida
     
     def ver_consultas_dia(self):
-        self.controller.abrir_consultas_dia()
+        self.controller.abrir_consultas_do_dia()  # Nome corrigido para consistência
     
     def ver_prontuarios(self):
         self.controller.abrir_prontuarios()
@@ -73,6 +73,7 @@ class MenuMedicoView:
         self.controller.abrir_relatorios_medico()
     
     def gerenciar_prescricoes(self):
+        # Este método ainda não existe no controller, vamos criá-lo
         self.controller.abrir_prescricoes()
     
     def sair(self):

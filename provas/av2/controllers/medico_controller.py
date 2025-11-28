@@ -16,6 +16,14 @@ class MedicoController:
             return Consulta.buscar_por_medico_e_data(medico_id, data_filtro)
         return Consulta.buscar_por_medico(medico_id)
     
+    def abrir_minha_agenda(self):
+        """Abre a agenda do médico"""
+        return self.main_controller.abrir_minha_agenda()
+    
+    def abrir_prescricoes(self):
+        """Abre a tela de prescrições"""
+        return self.main_controller.abrir_prescricoes()
+    
     def obter_prontuario_consulta(self, consulta_id):
         """Obtém o prontuário de uma consulta específica"""
         return Prontuario.buscar_por_consulta(consulta_id)

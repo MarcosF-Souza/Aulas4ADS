@@ -12,6 +12,7 @@ from views.medico.menu_view import MenuMedicoView
 from views.admin.login_view import LoginAdminView
 from views.admin.menu_view import MenuAdminView
 from controllers.main_controller import MainController
+from views.medico.minha_agenda_view import MinhaAgendaView
 from views.paciente.meus_dados_view import MeusDadosView  
 
 class Application:
@@ -69,6 +70,7 @@ class Application:
         # Views do médico
         self.views["LoginMedico"] = LoginMedicoView(self.root, self.controller)
         self.views["MenuMedico"] = MenuMedicoView(self.root, self.controller)
+        self.views["MinhaAgenda"] = MinhaAgendaView(self.root, self.controller)
         print("✅ Views do médico inicializadas")
         
         # Views do administrador
