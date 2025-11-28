@@ -62,6 +62,25 @@ class Administrador(Usuario):
             fetch_one=True
         )
         return resultado is not None
+    
+    def verificar_senha(self, senha):
+        """Verifica se a senha fornecida corresponde à senha do administrador"""
+        if not hasattr(self, '_senha_hash') or not self._senha_hash:
+            # Se não temos o hash armazenado, buscar do banco
+            db = Database()
+            resultado = db.executar_query(
+                "SELECT senha_hash FROM administradores WHERE id = ?",
+                (self.id,),
+                fetch_one=True
+            )
+            if resultado:
+                self._senha_hash = resultado['senha_hash']
+            else:
+                return False
+        
+        # Comparar o hash da senha fornecida com o hash armazenado
+        senha_hash_fornecida = self._hash_senha(senha)
+        return self._senha_hash == senha_hash_fornecida
 
     def ativar(self):
         """Ativa o administrador"""
@@ -91,7 +110,7 @@ class Administrador(Usuario):
             fetch_one=True
         )
         if resultado:
-            return cls(
+            admin = cls(
                 id=resultado['id'],
                 nome=resultado['nome'],
                 email=resultado['email'],
@@ -102,6 +121,9 @@ class Administrador(Usuario):
                 nivel_acesso=resultado['nivel_acesso'],
                 status=resultado['status']
             )
+            # Armazenar o hash da senha para verificação posterior
+            admin._senha_hash = resultado['senha_hash']
+            return admin
         return None
 
     @classmethod

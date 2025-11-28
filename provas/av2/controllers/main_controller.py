@@ -196,6 +196,40 @@ class MainController:
             print(f"❌ Falha no login: {mensagem}")
             messagebox.showerror("Erro", mensagem)
 
+    def fazer_login_medico(self, crm, senha):
+        """Método usado pela view de login do médico"""
+        print(f"🔐 Tentando login do médico: {crm}")
+        
+        sucesso, mensagem, medico = self.autenticar_medico(crm, senha)
+        
+        if sucesso:
+            print(f"✅ Login bem-sucedido: Dr. {medico.nome}")
+            # Atualizar o título da janela
+            self.app.root.title(f"Sistema de Agendamento - Médico: Dr. {medico.nome}")
+            # Navegar para o menu do médico
+            self.app.mostrar_view("MenuMedico")
+        else:
+            print(f"❌ Falha no login: {mensagem}")
+            from tkinter import messagebox
+            messagebox.showerror("Erro", mensagem)
+
+    def fazer_login_admin(self, email, senha):
+        """Método usado pela view de login do administrador"""
+        print(f"🔐 Tentando login do admin: {email}")
+        
+        sucesso, mensagem, admin = self.autenticar_admin(email, senha)
+        
+        if sucesso:
+            print(f"✅ Login bem-sucedido: Admin {admin.nome}")
+            # Atualizar o título da janela
+            self.app.root.title(f"Sistema de Agendamento - Administrador: {admin.nome}")
+            # Navegar para o menu do admin
+            self.app.mostrar_view("MenuAdmin")
+        else:
+            print(f"❌ Falha no login: {mensagem}")
+            from tkinter import messagebox
+            messagebox.showerror("Erro", mensagem)
+
     def abrir_cadastro_paciente(self):
         """Abre o cadastro de paciente"""
         self.mostrar_cadastro_paciente()
@@ -363,3 +397,8 @@ class MainController:
         """Mostra a tela de minhas consultas"""
         print("🎯 Navegando para MinhasConsultas")
         self.app.mostrar_view("MinhasConsultas")
+
+    def mostrar_meus_dados(self):
+        """Mostra a tela de meus dados"""
+        print("🎯 Navegando para MeusDados")
+        self.app.mostrar_view("MeusDados")

@@ -84,6 +84,29 @@ class Medico(Usuario):
                 especialidade=resultado['especialidade']
             )
         return None
+    
+    @classmethod
+    def buscar_por_crm(cls, crm):
+        """Busca um médico pelo CRM"""
+        db = Database()
+        resultado = db.executar_query(
+            "SELECT * FROM medicos WHERE crm = ? AND ativo = 1",
+            (crm,),
+            fetch_one=True
+        )
+        if resultado:
+            return cls(
+                id=resultado['id'],
+                nome=resultado['nome'],
+                email=resultado['email'],
+                telefone=resultado['telefone'],
+                senha=resultado['senha'],
+                ativo=resultado['ativo'],
+                data_criacao=resultado['data_criacao'],
+                crm=resultado['crm'],
+                especialidade=resultado['especialidade']
+            )
+        return None
 
     @classmethod
     def criar_tabela(cls):

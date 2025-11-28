@@ -90,7 +90,7 @@ class MenuPacienteView:
         self.controller.mostrar_minhas_consultas()
     
     def meus_dados(self):
-        messagebox.showinfo("Dados", "Funcionalidade de dados em desenvolvimento")
+        self.controller.mostrar_meus_dados()
     
     def meus_prontuarios(self):
         messagebox.showinfo("Prontuários", "Funcionalidade de prontuários em desenvolvimento")

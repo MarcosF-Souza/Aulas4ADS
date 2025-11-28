@@ -12,6 +12,7 @@ from views.medico.menu_view import MenuMedicoView
 from views.admin.login_view import LoginAdminView
 from views.admin.menu_view import MenuAdminView
 from controllers.main_controller import MainController
+from views.paciente.meus_dados_view import MeusDadosView  
 
 class Application:
     def __init__(self):
@@ -88,23 +89,24 @@ class Application:
         
         # Ocultar todas as views
         for nome, view in self.views.items():
-            if hasattr(view, 'ocultar'):
-                view.ocultar()
-            else:
-                # Fallback: se não tem método ocultar, esconde o frame
-                if hasattr(view, 'frame'):
+            try:
+                if hasattr(view, 'ocultar') and callable(view.ocultar):
+                    view.ocultar()
+                elif hasattr(view, 'frame'):
                     view.frame.pack_forget()
+            except Exception as e:
+                print(f"⚠️ Erro ao ocultar view {nome}: {e}")
         
         # Mostrar a view solicitada
         view = self.views[nome_view]
-        if hasattr(view, 'mostrar'):
-            view.mostrar()
-        else:
-            # Fallback: se não tem método mostrar, mostra o frame
-            if hasattr(view, 'frame'):
+        try:
+            if hasattr(view, 'mostrar') and callable(view.mostrar):
+                view.mostrar()
+            elif hasattr(view, 'frame'):
                 view.frame.pack(fill="both", expand=True)
-        
-        print(f"✅ View {nome_view} mostrada com sucesso")
+            print(f"✅ View {nome_view} mostrada com sucesso")
+        except Exception as e:
+            print(f"❌ Erro ao mostrar view {nome_view}: {e}")
     
     def run(self):
         self.root.mainloop()
